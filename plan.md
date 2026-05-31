@@ -13,22 +13,26 @@ This leads to halted production lines, compromised product quality, and lost rev
 ## 3. System Structure & Architecture
 The system is divided into three distinct layers, ensuring clean separation of concerns and robust error handling.
 
-* **Data Component (ETL Layer):** * **The Science (FDA):** Ingests and cleans the US FDA "Substances Added to Food" dataset to establish a factual, scientific baseline for ingredient technical effects (e.g., Stabilizer, Humectant).
-    * **The Supply Chain (Crawler):** A custom Python web crawler (using `BeautifulSoup` or `httpx`) extracts real Malaysian B2B supplier listings from public directories. 
+* **Data Component (ETL Layer):**
+    * **The Science (FDA):** Ingests and cleans the US FDA "Substances Added to Food" dataset to establish a factual, scientific baseline for ingredient technical effects (e.g., Stabilizer, Humectant).
+    * **The Supply Chain (Crawler):** A custom Python web crawler (using `BeautifulSoup` or `httpx`) extracts real Malaysian B2B supplier listings from public directories.
     * Both streams are merged and loaded into a structured `SQLite` database.
-* **AI Component (Reasoning Layer):** * An LLM acts as a Food Technologist. It takes the missing ingredient and the FDA baseline to calculate a viable chemical replacement.
+
+* **AI Component (Reasoning Layer):**
+    * An LLM acts as a Food Technologist. It takes the missing ingredient and the FDA baseline to calculate a viable chemical replacement.
     * The output is strictly validated against a **Pydantic** schema to ensure a deterministic JSON payload containing the substitute, ratio, reasoning, and matched local suppliers.
     * Includes a programmatic rule-based fallback if the AI hallucinates or fails JSON validation.
+
 * **Application & Integration Layer:**
     * **Backend:** Built with Python 3.14.* and FastAPI, securely managing environment variables (`.env`) and database queries.
-    * **Frontend:** A responsive, enterprise-grade B2B dashboard built with Angular, styled using Tailwind CSS, and utilizing PrimeNG components for complex data tables and formulation cards.
+    * **Frontend:** A responsive, enterprise-grade B2B dashboard built with Alpine.js + Tailwind CSS.
     * **Deployment:** Containerized via Docker (`docker-compose.yml`) for a seamless, demo-ready environment.
 
 ## 4. Project Directory Structure
-This optimized monorepo structure strictly separates the ETL pipeline, the AI reasoning, and the web application while perfectly accommodating the environment constraints (`uv` 0.8.*, `ruff` 0.15.*, and Python 3.14.*).
+This optimized monorepo structure strictly separates the ETL pipeline, the AI reasoning, and the web application.
 
 ```text
-halal-formulation-engine/
+formuhalal/
 ├── .env.example
 ├── .gitignore
 ├── docker-compose.yml
@@ -49,30 +53,21 @@ halal-formulation-engine/
 │   └── load_db.py
 │
 ├── backend/
-│   ├── src/
-│   │   ├── __init__.py
-│   │   ├── main.py
-│   │   ├── api/
-│   │   ├── core/
-│   │   │   ├── config.py
-│   │   │   └── prompts.py
-│   │   ├── models/
-│   │   │   └── schemas.py
-│   │   └── services/
-│   │       ├── ai_engine.py
-│   │       └── db_service.py
+│   └── src/
+│       ├── main.py
+│       ├── api/
+│       ├── core/
+│       ├── models/
+│       └── services/
 │
 ├── frontend/
+│   ├── index.html
 │   ├── package.json
-│   ├── src/
-│   │   ├── index.html
-│   │   ├── styles/
-│   │   ├── components/
-│   │   │   ├── FormulationCard
-│   │   │   ├── SupplierList
-│   │   │   └── ErrorState
-│   │   └── api/
-│   │       └── client.js
+│   ├── build.mjs
+│   ├── styles/
+│   │   └── input.css
+│   └── dist/
+│       └── styles.css
 │
 └── tests/
     ├── test_etl.py
@@ -80,7 +75,6 @@ halal-formulation-engine/
 ```
 
 ## 5. Division of Tasks
-To maintain velocity and prevent blocking, the workload is divided horizontally across the tech stack:
 
 ### Developer A: Data & AI Architect
 *Focus: `etl_pipeline/` and AI constraints.*
@@ -92,13 +86,6 @@ To maintain velocity and prevent blocking, the workload is divided horizontally 
 ### Developer B: Fullstack & Integration Engineer
 *Focus: `frontend/`, `backend/`, and DevOps.*
 * Configure the project environment, package management (`uv`), and FastAPI routing.
-* Develop the user interface from system design to deployment using Angular, Tailwind, and PrimeNG.
+* Develop the user interface with Alpine.js + Tailwind CSS.
 * Integrate the backend logic to seamlessly query the SQLite database and serve data to the frontend.
 * Manage containerization (Docker) and code quality checks (`ruff`).
-
-
-to add:
-landing page
-function page 
-product, full ingredient, ingredient swap
-sqlite
