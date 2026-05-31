@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About FormuHalal - Halal Formulation Engine</title>
+    <link rel="stylesheet" href="/dist/styles.css">
+</head>
+<body class="min-h-screen pattern-bg">
+<header class="sticky top-0 z-40 frosted-glass-header">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-20">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-md">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-primary">FormuHalal</h1>
+                    <p class="text-xs text-gray-500">Halal Formulation & Sourcing Engine</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-6">
+                <nav class="hidden md:flex items-center gap-6">
+                    <a href="/" class="text-sm font-medium text-gray-700 hover:text-primary transition-colors">Home</a>
+                    <a href="/about" class="text-sm font-medium text-primary">About</a>
+                </nav>
+                <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 frosted-glass text-gold text-sm font-medium rounded-full border border-gold/20">Halal Certified</span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="space-y-8">
+        <div class="frosted-glass-strong rounded-xl p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">About This Project</h2>
+            <p class="text-gray-600 mb-4">
+                FormuHalal is a digital B2B decision-support system designed specifically for Malaysian SME food manufacturers. 
+                When raw materials face shortages, price spikes, or compliance issues, businesses need to quickly find 
+                Halal-compliant substitutes without compromising product quality.
+            </p>
+            <p class="text-gray-600 mb-4">
+                Our platform bridges the gap between food science expertise and local supply chain logistics by providing:
+            </p>
+            <ul class="list-disc list-inside text-gray-600 space-y-2 mb-4">
+                <li>Chemical property matching for ingredient substitution</li>
+                <li>Verified Malaysian Halal supplier database</li>
+                <li>Real-time compliance checking against JAKIM standards</li>
+                <li>Enterprise-grade dashboard for formulation management</li>
+            </ul>
+            <p class="text-gray-600">
+                Built with modern web technologies and designed for seamless integration with existing manufacturing workflows.
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="frosted-glass rounded-xl p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">The Problem</h3>
+                <p class="text-gray-600 text-sm">
+                    SMEs often lack in-house food science expertise to find Halal-compliant substitutes. Production halts, 
+                    quality issues, and revenue loss result from ingredient shortages.
+                </p>
+            </div>
+            <div class="frosted-glass rounded-xl p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">Our Solution</h3>
+                <p class="text-gray-600 text-sm">
+                    An intelligent substitution engine that matches chemical properties with verified local suppliers, 
+                    enabling rapid pivot decisions while maintaining Halal certification integrity.
+                </p>
+            </div>
+        </div>
+
+        <div class="frosted-glass-strong rounded-xl p-8">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Technology Stack</h3>
+            <div class="flex flex-wrap gap-3">
+                <span class="inline-flex items-center gap-1 px-3 py-1 frosted-glass text-primary text-xs font-medium rounded-full">FastAPI</span>
+                <span class="inline-flex items-center gap-1 px-3 py-1 frosted-glass text-primary text-xs font-medium rounded-full">SQLite</span>
+                <span class="inline-flex items-center gap-1 px-3 py-1 frosted-glass text-primary text-xs font-medium rounded-full">Alpine.js</span>
+                <span class="inline-flex items-center gap-1 px-3 py-1 frosted-glass text-primary text-xs font-medium rounded-full">Tailwind CSS</span>
+                <span class="inline-flex items-center gap-1 px-3 py-1 frosted-glass text-primary text-xs font-medium rounded-full">Python 3.14</span>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="mt-0 border-t border-gray-200 frosted-glass">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span class="text-sm text-gray-500">FormuHalal © 2026. No rights reserved.</span>
+            <div class="flex items-center gap-4 text-sm">
+                <a href="/formulation" class="text-gray-500 hover:text-primary transition-colors">Tool</a>
+            </div>
+        </div>
+    </div>
+</footer>
+</body>
+</html>
