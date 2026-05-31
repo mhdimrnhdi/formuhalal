@@ -4,6 +4,9 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
+    "serve": "npx serve .",
+    "dev": "concurrently \"npm run watch\" \"npm run serve\"",
+    "watch": "node build.mjs --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
@@ -11,7 +14,9 @@
     "@tailwindcss/postcss": "^4.0.0",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.15",
-    "tailwindcss": "^4.3.0"
+    "tailwindcss": "^4.3.0",
+    "chokidar": "^4.0.3",
+    "concurrently": "^8.2.2"
   },
   "dependencies": {
     "glob": "^13.0.6"
