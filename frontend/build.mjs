@@ -20,7 +20,7 @@ async function build() {
 
 if (process.argv.includes('--watch')) {
   build().catch(console.error);
-  chokidar.watch(['./styles/input.css', './index.html']).on('change', () => {
+  chokidar.watch(['./styles/input.css']).on('change', () => {
     console.log('Change detected, rebuilding...');
     build().catch(console.error);
   });
