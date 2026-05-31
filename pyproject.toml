@@ -1,0 +1,17 @@
+[project]
+name = "formuhalal"
+version = "0.1.0"
+description = "The Halal Formulation & Sourcing Engine"
+requires-python = "==3.14"
+dependencies = [
+    "fastapi==0.115.12",
+    "uvicorn==0.34.3",
+    "pydantic==2.11.5",
+    "python-dotenv==1.1.0",
+    "google-genai==1.16.1",
+    "httpx==0.28.1",
+    "beautifulsoup4==4.13.4",
+]
+
+[project.optional-dependencies]
+dev = ["ruff==0.15.0"]
