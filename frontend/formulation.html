@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulation Tool - FormuHalal</title>
+    <link rel="stylesheet" href="dist/styles.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body class="min-h-screen pattern-bg" x-data="formulationApp()">
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('formulationApp', () => ({
+        productName: '',
+        ingredients: '',
+        substituteFor: '',
+        isLoading: false,
+        hasResults: false,
+        showToast: false,
+        toastMessage: '',
+        toastType: 'success',
+        errors: { productName: '', ingredients: '', substituteFor: '' },
+        
+        result: {
+            original: 'Porcine Gelatin',
+            substitute: 'Bovine Gelatin (Halal-Certified)',
+            ratio: '1:1',
+            reasoning: 'Bovine gelatin sourced from halal-certified cattle provides identical gelling properties with a bloom strength of 200-255. Suitable for confectionery, pharmaceutical capsules, and dessert applications. JAKIM certified alternatives available from Malaysian suppliers.'
+        },
+        
+        suppliers: [
+            { name: 'Halal Ingredients Sdn Bhd', location: 'Selangor, Malaysia', certifications: ['JAKIM', 'MUIS', 'MUI'], rating: 4.9, leadTime: '3-5 days', minOrder: '100 kg' },
+            { name: 'Pure Halal Solutions', location: 'Penang, Malaysia', certifications: ['JAKIM', 'IFANCA'], rating: 4.7, leadTime: '5-7 days', minOrder: '50 kg' },
+            { name: 'MyHalal Trading Co.', location: 'Johor Bahru, Malaysia', certifications: ['JAKIM', 'ESMA'], rating: 4.8, leadTime: '2-4 days', minOrder: '200 kg' }
+        ],
+        
+        showError(message) { this.toastMessage = message; this.toastType = 'error'; this.showToast = true; setTimeout(() => this.showToast = false, 4000); },
+        showSuccess(message) { this.toastMessage = message; this.toastType = 'success'; this.showToast = true; setTimeout(() => this.showToast = false, 4000); },
+        
+        validateForm() {
+            this.errors = { productName: '', ingredients: '', substituteFor: '' };
+            if (!this.productName.trim()) { this.errors.productName = 'Product name required'; return false; }
+            if (!this.ingredients.trim()) { this.errors.ingredients = 'Ingredients list required'; return false; }
+            if (!this.substituteFor.trim()) { this.errors.substituteFor = 'Ingredient to substitute required'; return false; }
+            return true;
+        },
+        
+        async submitForm() {
+            if (!this.validateForm()) {
+                if (this.errors.productName) this.showError('Please enter a product name');
+                else if (this.errors.ingredients) this.showError('Please enter the ingredients list');
+                else if (this.errors.substituteFor) this.showError('Please specify the ingredient to substitute');
+                return;
+            }
+            this.isLoading = true; this.hasResults = false;
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            this.isLoading = false; this.hasResults = true; this.showSuccess('Halal substitution found successfully!');
+        }
+    }));
+});
+</script>
+
+<div x-show="showToast" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-2" class="fixed top-4 right-4 z-50" role="alert" aria-live="polite">
+    <div :class="toastType === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-[#e6f4ec] border-primary text-primary'" class="px-4 py-3 rounded-lg border shadow-lg flex items-center gap-3">
+        <template x-if="toastType === 'success'">
+            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+        </template>
+        <template x-if="toastType === 'error'">
+            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </template>
+        <span x-text="toastMessage" class="font-medium"></span>
+    </div>
+</div>
+
+<header class="sticky top-0 z-40 frosted-glass-header">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-20">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-md">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-primary">FormuHalal</h1>
+                    <p class="text-xs text-gray-500">Halal Formulation & Sourcing Engine</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-6">
+                <nav class="hidden md:flex items-center gap-6">
+                    <a href="index.html" class="text-sm font-medium text-gray-700 hover:text-primary transition-colors">Home</a>
+                    <a href="about.html" class="text-sm font-medium text-gray-700 hover:text-primary transition-colors">About</a>
+                </nav>
+                <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 frosted-glass text-gold text-sm font-medium rounded-full border border-gold/20">Halal Certified</span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="grid lg:grid-cols-5 gap-8">
+        <div class="lg:col-span-2">
+            <div class="frosted-glass-strong rounded-xl p-6">
+                <div class="flex items-center gap-2 mb-6">
+                    <div class="w-8 h-8 rounded-lg bg-[#e6f4ec]/70 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                    </div>
+                    <h2 class="text-lg font-semibold text-gray-800">Formulation Input</h2>
+                </div>
+                <form @submit.prevent="submitForm()" class="space-y-5">
+                    <div>
+                        <label for="productName" class="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
+                        <input type="text" id="productName" x-model="productName" placeholder="e.g., Gummy Vitamins" :class="errors.productName ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300 focus:border-primary focus:ring-primary/20'" class="w-full px-4 py-3 rounded-lg border bg-white/90 focus:outline-none focus:ring-2 transition-all duration-200" aria-label="Product Name" />
+                        <p x-show="errors.productName" class="mt-1 text-sm text-red-600" x-text="errors.productName"></p>
+                    </div>
+                    <div>
+                        <label for="ingredients" class="block text-sm font-medium text-gray-700 mb-2">Full Ingredients List</label>
+                        <textarea id="ingredients" x-model="ingredients" rows="5" placeholder="Enter all ingredients, separated by commas..." :class="errors.ingredients ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300 focus:border-primary focus:ring-primary/20'" class="w-full px-4 py-3 rounded-lg border bg-white/90 focus:outline-none focus:ring-2 transition-all duration-200 resize-none" aria-label="Full Ingredients List"></textarea>
+                        <p x-show="errors.ingredients" class="mt-1 text-sm text-red-600" x-text="errors.ingredients"></p>
+                    </div>
+                    <div>
+                        <label for="substituteFor" class="block text-sm font-medium text-gray-700 mb-2">Ingredient to Substitute</label>
+                        <input type="text" id="substituteFor" x-model="substituteFor" placeholder="e.g., Porcine Gelatin" :class="errors.substituteFor ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300 focus:border-primary focus:ring-primary/20'" class="w-full px-4 py-3 rounded-lg border bg-white/90 focus:outline-none focus:ring-2 transition-all duration-200" aria-label="Ingredient to Substitute" />
+                        <p x-show="errors.substituteFor" class="mt-1 text-sm text-red-600" x-text="errors.substituteFor"></p>
+                    </div>
+                    <button type="submit" :disabled="isLoading" class="w-full py-3.5 px-6 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-md flex items-center justify-center gap-2">
+                        <template x-if="!isLoading"><span class="flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>Find Halal Substitute</span></template>
+                        <template x-if="isLoading"><span class="flex items-center gap-2"><svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Analyzing Formulation...</span></template>
+                    </button>
+                </form>
+                <div class="mt-6 pt-6 border-t border-gray-200"><p class="text-xs text-gray-500">Our database includes 5,000+ halal-certified ingredients with real-time supplier verification.</p></div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-3 space-y-6">
+            <div x-show="!hasResults && !isLoading" class="frosted-glass rounded-xl p-12 text-center">
+                <div class="w-16 h-16 rounded-full bg-[#e6f4ec]/70 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Ready to Analyze</h3>
+                <p class="text-gray-500 max-w-sm mx-auto">Enter your product formulation details and we'll find halal-certified substitutes with verified Malaysian suppliers.</p>
+            </div>
+
+            <div x-show="isLoading" x-cloak class="space-y-6 animate-pulse">
+                <div class="frosted-glass rounded-xl overflow-hidden">
+                    <div class="bg-gradient-to-r from-primary to-primary-dark px-6 py-4">
+                        <div class="h-6 bg-white/40 rounded w-48 mb-4"></div>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid sm:grid-cols-3 gap-4 mb-6">
+                            <div class="frosted-glass rounded-lg p-4 border border-red-100"><div class="h-3 bg-gray-200 rounded w-16 mb-1"></div><div class="h-4 bg-gray-200 rounded w-24"></div></div>
+                            <div class="flex items-center justify-center"><div class="w-10 h-10 rounded-full bg-gray-200"></div></div>
+                            <div class="frosted-glass rounded-lg p-4 border border-primary/30"><div class="h-3 bg-gray-200 rounded w-16 mb-1"></div><div class="h-4 bg-gray-200 rounded w-32"></div></div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-4 mb-4">
+                            <div class="h-7 bg-gray-200 rounded-full w-24"></div>
+                            <div class="h-7 bg-gray-200 rounded-full w-28"></div>
+                        </div>
+                        <div class="frosted-glass rounded-lg p-4"><div class="h-4 bg-gray-200 rounded w-32 mb-2"></div><div class="h-4 bg-gray-200 rounded w-full mb-1.5"></div><div class="h-4 bg-gray-200 rounded w-5/6 mb-1.5"></div><div class="h-4 bg-gray-200 rounded w-4/5"></div></div>
+                    </div>
+                </div>
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <template x-for="i in 3" :key="i">
+                        <div class="frosted-glass rounded-xl p-5">
+                            <div class="flex items-start justify-between mb-3">
+                                <div><div class="h-5 bg-gray-200 rounded w-32 mb-1"></div><div class="h-4 bg-gray-200 rounded w-24 mb-2"></div></div><div class="h-5 bg-gray-200 rounded-full w-12"></div>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 mb-3"><div class="h-5 bg-gray-200 rounded-full w-16"></div><div class="h-5 bg-gray-200 rounded-full w-14"></div></div>
+                            <div class="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-200">
+                                <div class="h-3 bg-gray-200 rounded w-20"></div>
+                                <div class="h-3 bg-gray-200 rounded w-16"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div x-show="hasResults" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" class="space-y-6">
+                <div class="overflow-hidden rounded-xl frosted-glass-strong">
+                    <div class="bg-gradient-to-r from-primary to-primary-dark px-6 py-4">
+                        <h3 class="text-lg font-semibold text-white flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Halal Substitution Found</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid sm:grid-cols-3 gap-4 mb-6">
+                            <div class="frosted-glass rounded-lg p-4 border border-red-100"><p class="text-xs font-medium text-red-600 uppercase tracking-wide mb-1">Original</p><p class="font-semibold text-red-800" x-text="result.original"></p></div>
+                            <div class="flex items-center justify-center"><div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center"><svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg></div></div>
+                            <div class="frosted-glass rounded-lg p-4 border border-primary/30"><p class="text-xs font-medium text-primary uppercase tracking-wide mb-1">Substitute</p><p class="font-semibold text-primary" x-text="result.substitute"></p></div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-4 mb-4">
+                            <div class="flex items-center gap-2 px-3 py-1.5 frosted-glass rounded-full border border-gold/30">
+                                <svg class="w-4 h-4 text-gold" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+                                <span class="text-sm font-medium text-gold-dark">Ratio: <span x-text="result.ratio"></span></span>
+                            </div>
+                            <div class="flex items-center gap-2 px-3 py-1.5 frosted-glass rounded-full border border-primary/30">
+                                <svg class="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.945a3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+                                <span class="text-sm font-medium text-primary">Halal Certified</span>
+                            </div>
+                        </div>
+                        <div class="frosted-glass rounded-lg p-4"><p class="text-sm font-medium text-gray-800 mb-1">Technical Reasoning</p><p class="text-sm text-gray-600" x-text="result.reasoning"></p></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-4"><h3 class="text-lg font-semibold text-gray-800">Verified Malaysian Suppliers</h3><span class="text-sm text-gray-500" x-text="suppliers.length + ' suppliers found'"></span></div>
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <template x-for="supplier in suppliers" :key="supplier.name">
+                            <div class="rounded-xl frosted-glass p-5 hover:gold-glow transition-all duration-200 group cursor-pointer">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div><h4 class="font-semibold text-gray-800 group-hover:text-primary transition-colors" x-text="supplier.name"></h4>
+                                        <p class="text-sm text-gray-500 flex items-center gap-1 mt-0.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg><span x-text="supplier.location"></span></p>
+                                    </div><div class="flex items-center gap-1 px-2 py-1 frosted-glass rounded-full"><span class="text-sm font-medium text-gold-dark" x-text="supplier.rating"></span></div>
+                                </div>
+                                <div class="flex flex-wrap gap-1.5 mb-3">
+                                    <template x-for="cert in supplier.certifications" :key="cert">
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 frosted-glass text-primary text-xs font-medium rounded-full">
+                                            <svg class="w-3 h-3 text-gold" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg><span x-text="cert"></span>
+                                        </span>
+                                    </template>
+                                </div>
+                                <div class="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-200">
+                                    <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 0 11 0 1180 0z" /></svg><span x-text="supplier.leadTime"></span></span>
+                                    <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>Min: <span x-text="supplier.minOrder"></span></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="mt-4 border-t border-gray-200 frosted-glass">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span class="text-sm text-gray-500">FormuHalal © 2024. All rights reserved.</span>
+            <div class="flex items-center gap-4 text-sm">
+                <a href="about.html" class="text-gray-500 hover:text-primary transition-colors">About</a>
+            </div>
+        </div>
+    </div>
+</footer>
+</body>
+</html>
