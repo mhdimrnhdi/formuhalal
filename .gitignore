@@ -32,3 +32,6 @@ env/
 
 # Docker
 .docker/
+
+# Notes
+notes/
