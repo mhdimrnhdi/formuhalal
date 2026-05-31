@@ -21,10 +21,10 @@
     content: "";
     position: fixed;
     inset: 0;
-    background-image: url("/pattern_bg.jpg");
+    background-image: url("/dist/pattern_bg.jpg");
     background-size: cover;
     background-position: center;
-    opacity: 0.3;
+    opacity: 0.4;
     z-index: -1;
   }
   
