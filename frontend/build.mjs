@@ -15,6 +15,9 @@ async function build() {
   });
   fs.mkdirSync('./dist', { recursive: true });
   fs.writeFileSync('./dist/styles.css', result.css);
+  if (fs.existsSync('./assets/pattern_bg.svg')) {
+    fs.copyFileSync('./assets/pattern_bg.svg', './dist/pattern_bg.svg');
+  }
   console.log(`Built: ${(result.css.length / 1024).toFixed(1)}KB`);
 }
 

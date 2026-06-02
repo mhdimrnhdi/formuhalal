@@ -1,0 +1,16 @@
+[project]
+name = "backend"
+version = "0.1.0"
+requires-python = "==3.14.*"
+dependencies = [
+    "flask==3.1.0",
+    "flask-cors==5.0.1",
+    "python-dotenv==1.2.2",
+]
+
+[tool.uv]
+required-version = "==0.8.24"
+
+[tool.ruff]
+line-length = 120
+target-version = "py314"

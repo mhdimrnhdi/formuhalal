@@ -1,0 +1,36 @@
+services:
+  etl:
+    build:
+      context: ./etl_pipeline
+    init: true
+    environment:
+      DATA_DIR: /data
+      ETL_CRON: ${ETL_CRON:-0 2 * * 0}
+      RUN_ON_START: ${ETL_RUN_ON_START:-true}
+      SUPPLIER_CRAWL_URL: ${SUPPLIER_CRAWL_URL:-}
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8001:8001"
+    environment:
+      FRONTEND_URL: http://frontend:8000
+      DB_URL: /data/database.sqlite
+    volumes:
+      - ./data:/data
+    depends_on:
+      - etl
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8000:8000"
+    environment:
+      BACKEND_URL: http://backend:8001
+    depends_on:
+      - backend

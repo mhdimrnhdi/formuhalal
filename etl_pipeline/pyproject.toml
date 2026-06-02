@@ -1,0 +1,16 @@
+[project]
+name = "etl-pipeline"
+version = "0.1.0"
+description = "Scheduled ETL for FDA substances and supplier data"
+requires-python = "==3.14.*"
+dependencies = [
+    "beautifulsoup4==4.14.3",
+    "httpx==0.28.1",
+]
+
+[tool.uv]
+required-version = "==0.8.24"
+
+[tool.ruff]
+line-length = 120
+target-version = "py314"

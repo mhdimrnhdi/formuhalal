@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
-@tailwind utilities;
+@theme {
+  --color-primary: #007A33;
+  --color-primary-dark: #005a26;
+  --color-gold: #D4AF37;
+  --color-gold-dark: #b8962e;
+}
 
 @layer utilities {
-  .text-primary { color: #007A33; }
-  .text-gold { color: #D4AF37; }
-  .text-gold-dark { color: #b8962e; }
-  .bg-primary { background-color: #007A33; }
-  .border-primary { border-color: #007A33; }
-  .from-primary { --tw-gradient-stops: #007A33; }
-  .to-primary-dark { --tw-gradient-stops: #005a26; }
-  
+  [x-cloak] {
+    display: none !important;
+  }
+
   /* Background with pattern image - used on body */
   .pattern-bg {
     position: relative;
@@ -21,13 +22,13 @@
     content: "";
     position: fixed;
     inset: 0;
-    background-image: url("/dist/pattern_bg.jpg");
+    background-image: url("/dist/pattern_bg.svg");
     background-size: cover;
     background-position: center;
     opacity: 0.4;
     z-index: -1;
   }
-  
+
   /* Frosted Glass Effects - highly translucent */
   .frosted-glass {
     background-color: rgba(255, 255, 255, 0.12);
@@ -36,7 +37,7 @@
     -webkit-backdrop-filter: blur(30px);
     box-shadow: 0 8px 32px rgba(0, 122, 51, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
   }
-  
+
   .frosted-glass-strong {
     background-color: rgba(255, 255, 255, 0.18);
     border: 1px solid rgba(255, 255, 255, 0.3);
@@ -44,13 +45,12 @@
     -webkit-backdrop-filter: blur(30px);
     box-shadow: 0 8px 32px rgba(0, 122, 51, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.15);
   }
-  
-.frosted-glass-header {
+
+  .frosted-glass-header {
     background-color: rgba(200, 230, 210, 0.25);
-    /* border-bottom: 1px solid rgba(0, 122, 51, 0.2); */
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
   }
-  
+
   .gold-glow { box-shadow: 0 0 30px rgba(212, 175, 55, 0.4); }
 }

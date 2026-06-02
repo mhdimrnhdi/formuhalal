@@ -19,15 +19,6 @@ uv run dev.py
 uv run uvicorn --app-dir src --host 0.0.0.0 --port 8000 app:app
 ```
 
-### Docker
-
-```bash
-# Build image
-docker build -t frontend frontend
-# Run container
-docker run -p 8000:8000 frontend
-```
-
 ## Features
 
 - Ingredient substitution with chemical property matching (mock data for demo)
