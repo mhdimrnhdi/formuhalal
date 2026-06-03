@@ -94,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
         run_pipeline(skip_crawl=args.skip_crawl, skip_download=args.skip_download)
     except Exception:
         LOGGER.exception("ETL pipeline failed")
-        return 0
+        return 1
 
     return 0
 
