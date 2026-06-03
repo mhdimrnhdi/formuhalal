@@ -8,6 +8,11 @@ dependencies = [
     "python-dotenv==1.2.2",
 ]
 
+[dependency-groups]
+dev = [
+    "ruff==0.15.15",
+]
+
 [tool.uv]
 required-version = "==0.8.24"
 

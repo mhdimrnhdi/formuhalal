@@ -11,6 +11,8 @@
 <script>
 document.addEventListener('alpine:init', () => {
     Alpine.data('formulationApp', () => ({
+        backendUrl: {{ backend_url | tojson }},
+        tempUserId: '',
         productName: '',
         ingredients: '',
         substituteFor: '',
@@ -22,20 +24,32 @@ document.addEventListener('alpine:init', () => {
         errors: { productName: '', ingredients: '', substituteFor: '' },
         
         result: {
-            original: 'Porcine Gelatin',
-            substitute: 'Bovine Gelatin (Halal-Certified)',
-            ratio: '1:1',
-            reasoning: 'Bovine gelatin sourced from halal-certified cattle provides identical gelling properties with a bloom strength of 200-255. Suitable for confectionery, pharmaceutical capsules, and dessert applications. JAKIM certified alternatives available from Malaysian suppliers.'
+            original: '',
+            substitute: '',
+            ratio: 'N/A',
+            reasoning: ''
         },
         
-        suppliers: [
-            { name: 'Halal Ingredients Sdn Bhd', location: 'Selangor, Malaysia', certifications: ['JAKIM', 'MUIS', 'MUI'], rating: 4.9, leadTime: '3-5 days', minOrder: '100 kg' },
-            { name: 'Pure Halal Solutions', location: 'Penang, Malaysia', certifications: ['JAKIM', 'IFANCA'], rating: 4.7, leadTime: '5-7 days', minOrder: '50 kg' },
-            { name: 'MyHalal Trading Co.', location: 'Johor Bahru, Malaysia', certifications: ['JAKIM', 'ESMA'], rating: 4.8, leadTime: '2-4 days', minOrder: '200 kg' }
-        ],
+        alternatives: [],
+        storedJson: '',
+        requestHashNumber: '',
         
         showError(message) { this.toastMessage = message; this.toastType = 'error'; this.showToast = true; setTimeout(() => this.showToast = false, 4000); },
         showSuccess(message) { this.toastMessage = message; this.toastType = 'success'; this.showToast = true; setTimeout(() => this.showToast = false, 4000); },
+
+        init() {
+            this.tempUserId = this.getOrCreateTempUserId();
+        },
+
+        getOrCreateTempUserId() {
+            const storageKey = 'formuhalal_temp_user_id';
+            let tempUserId = window.localStorage.getItem(storageKey);
+            if (!tempUserId) {
+                tempUserId = window.crypto?.randomUUID?.() || `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                window.localStorage.setItem(storageKey, tempUserId);
+            }
+            return tempUserId;
+        },
         
         validateForm() {
             this.errors = { productName: '', ingredients: '', substituteFor: '' };
@@ -53,8 +67,42 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
             this.isLoading = true; this.hasResults = false;
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            this.isLoading = false; this.hasResults = true; this.showSuccess('Halal substitution found successfully!');
+            try {
+                const response = await fetch(`${this.backendUrl}/api/formulation`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${this.tempUserId}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        product_name: this.productName,
+                        ingredients: this.ingredients,
+                        substitute_for: this.substituteFor
+                    })
+                });
+                const payload = await response.json();
+                if (!response.ok) throw new Error(payload.error || 'Unable to analyze formulation');
+
+                const dbResult = payload.database_result || {};
+                const target = dbResult.target_substance;
+                this.alternatives = dbResult.substances_with_same_used_for || [];
+                this.storedJson = payload.stored_json || '';
+                this.requestHashNumber = payload.request_hash_number || '';
+                this.result = {
+                    original: target?.substance || this.substituteFor,
+                    substitute: this.alternatives[0]?.substance || 'No database substitute found',
+                    ratio: `${this.alternatives.length} matches`,
+                    reasoning: target
+                        ? `Matched ${target.substance} by ${dbResult.matched_on}. Shared uses: ${(dbResult.used_for_search_terms || []).join(', ') || 'none'}.`
+                        : 'No matching substance or other name was found in the database.'
+                };
+                this.hasResults = true;
+                this.showSuccess(target ? 'Database substitutes found successfully!' : 'Request saved, but no database match was found.');
+            } catch (error) {
+                this.showError(error.message);
+            } finally {
+                this.isLoading = false;
+            }
         }
     }));
 });
@@ -126,7 +174,7 @@ document.addEventListener('alpine:init', () => {
                         <template x-if="isLoading"><span class="flex items-center gap-2"><svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Analyzing Formulation...</span></template>
                     </button>
                 </form>
-                <div class="frosted-glass rounded-xl p-6"><p class="text-xs text-gray-500">Mock data for demonstration purposes.</p></div>
+                <div class="frosted-glass rounded-xl p-6"><p class="text-xs text-gray-500">Uses a temporary browser user id as the backend bearer token.</p></div>
             </div>
         </div>
 
@@ -199,28 +247,31 @@ document.addEventListener('alpine:init', () => {
                 </div>
 
                 <div>
-                    <div class="flex items-center justify-between mb-4"><h3 class="text-lg font-semibold text-gray-800">Verified Malaysian Suppliers</h3><span class="text-sm text-gray-500" x-text="suppliers.length + ' suppliers found'"></span></div>
+                    <div class="flex items-center justify-between mb-4"><h3 class="text-lg font-semibold text-gray-800">Database Substance Matches</h3><span class="text-sm text-gray-500" x-text="alternatives.length + ' substances found'"></span></div>
                     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <template x-for="supplier in suppliers" :key="supplier.name">
+                        <template x-for="substance in alternatives" :key="substance.id">
                             <div class="rounded-xl frosted-glass p-5 hover:gold-glow transition-all duration-200 group cursor-pointer">
                                 <div class="flex items-start justify-between mb-3">
-                                    <div><h4 class="font-semibold text-gray-800 group-hover:text-primary transition-colors" x-text="supplier.name"></h4>
-                                        <p class="text-sm text-gray-500 flex items-center gap-1 mt-0.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg><span x-text="supplier.location"></span></p>
-                                    </div><div class="flex items-center gap-1 px-2 py-1 frosted-glass rounded-full"><span class="text-sm font-medium text-gold-dark" x-text="supplier.rating"></span></div>
+                                    <div><h4 class="font-semibold text-gray-800 group-hover:text-primary transition-colors" x-text="substance.substance"></h4>
+                                        <p class="text-sm text-gray-500 flex items-center gap-1 mt-0.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg><span x-text="substance.id"></span></p>
+                                    </div><div class="flex items-center gap-1 px-2 py-1 frosted-glass rounded-full"><span class="text-sm font-medium text-gold-dark" x-text="substance.matched_used_for.length"></span></div>
                                 </div>
                                 <div class="flex flex-wrap gap-1.5 mb-3">
-                                    <template x-for="cert in supplier.certifications" :key="cert">
+                                    <template x-for="usedFor in substance.matched_used_for" :key="usedFor">
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 frosted-glass text-primary text-xs font-medium rounded-full">
-                                            <svg class="w-3 h-3 text-gold" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg><span x-text="cert"></span>
+                                            <svg class="w-3 h-3 text-gold" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg><span x-text="usedFor"></span>
                                         </span>
                                     </template>
                                 </div>
                                 <div class="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-200">
-                                    <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 0 11 0 1180 0z" /></svg><span x-text="supplier.leadTime"></span></span>
-                                    <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>Min: <span x-text="supplier.minOrder"></span></span>
+                                    <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M9 8h6m2 12H7a2 2 0 01-2-2V6a2 2 0 012-2h5l5 5v9a2 2 0 01-2 2z" /></svg><span x-text="substance.other_names.length + ' other names'"></span></span>
+                                    <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg><span x-text="substance.used_for.length + ' uses'"></span></span>
                                 </div>
                             </div>
                         </template>
+                    </div>
+                    <div x-show="storedJson" class="mt-4 frosted-glass rounded-lg p-4 text-xs text-gray-500">
+                        Saved JSON: <span class="font-medium text-gray-700" x-text="storedJson"></span>
                     </div>
                 </div>
             </div>

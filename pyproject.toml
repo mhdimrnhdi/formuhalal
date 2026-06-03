@@ -7,5 +7,11 @@ requires-python = "==3.14.*"
 [tool.uv]
 required-version = "==0.8.24"
 
+[dependency-groups]
+dev = [
+    "ruff==0.15.15",
+]
+
 [tool.ruff]
 line-length = 120
+target-version = "py314"

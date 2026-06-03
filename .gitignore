@@ -1,41 +1,67 @@
-# Python
+# Python bytecode and caches
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-*.egg-info/
-dist/
-build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.hypothesis/
+htmlcov/
+.coverage
+.coverage.*
 
 # Virtual environments
 .venv/
 venv/
 env/
 
-# Database
-*.sqlite
-*.db
+# Packaging / build artifacts
+*.egg-info/
+build/
+dist/
 
-# Environment
+# Node (frontend CSS toolchain)
+node_modules/
+
+# Environment secrets
 .env
 .env.local
 
-# IDE
+# SQLite databases (generated under data/ or elsewhere)
+*.sqlite
+*.sqlite3
+*.db
+
+# Logs
+*.log
+
+# Docker local state
+.docker/
+
+# IDE / editor
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# Logs
-*.log
+# OS
+.DS_Store
+Thumbs.db
 
-# Docker
-.docker/
-
-# Notes
+# Local notes (not part of the repo)
 notes/
 
-# Frontend build
-/frontend/node_modules/
+# Frontend build output (sources live in styles/ + build.mjs)
 /frontend/dist/
+/frontend/node_modules/
+
+# Runtime / generated data (ETL + backend write these; keep data/raw/.gitkeep)
+/data/formulation_results/
+/data/__pycache__/
+
+# Optional local backend data copies
+/backend/data/

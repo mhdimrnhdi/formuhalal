@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from crawler import crawl_suppliers
+from fda_processor import clean_food_substances
 from load_db import load_database
 
 LOGGER = logging.getLogger("etl")
@@ -21,6 +22,7 @@ def data_dir() -> Path:
 def run_pipeline(
     *,
     skip_crawl: bool = False,
+    skip_download: bool = False,
 ) -> None:
     root = data_dir()
     raw_dir = root / "raw"
@@ -28,6 +30,16 @@ def run_pipeline(
     clean_csv = root / "FoodSubstances_clean.csv"
     suppliers_json = raw_dir / "suppliers.json"
     database_path = root / "database.sqlite"
+
+    if skip_download:
+        if not clean_csv.exists():
+            raise FileNotFoundError(f"Clean substances CSV not found at {clean_csv}")
+    else:
+        if not raw_csv.exists():
+            raise FileNotFoundError(f"Raw FDA CSV not found at {raw_csv}")
+        LOGGER.info("Cleaning FDA substances from %s", raw_csv)
+        row_count = clean_food_substances(raw_csv, clean_csv)
+        LOGGER.info("Wrote %s substance rows to %s", row_count, clean_csv)
 
     if skip_crawl and not suppliers_json.exists():
         LOGGER.warning("Skipping supplier crawl and no existing %s found", suppliers_json)
@@ -72,7 +84,7 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parse_args(argv)
     try:
-        run_pipeline(skip_crawl=args.skip_crawl)
+        run_pipeline(skip_crawl=args.skip_crawl, skip_download=args.skip_download)
     except Exception:
         LOGGER.exception("ETL pipeline failed")
         return 1

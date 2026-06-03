@@ -23,4 +23,5 @@ def about(request: Request):
 
 @app.get("/formulation")
 def formulation(request: Request):
-    return templates.TemplateResponse(request, "formulation.html", {})
+    backend_url = os.getenv("PUBLIC_BACKEND_URL", "http://localhost:8001")
+    return templates.TemplateResponse(request, "formulation.html", {"backend_url": backend_url})

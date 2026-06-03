@@ -17,10 +17,7 @@ from bs4 import BeautifulSoup
 
 LOGGER = logging.getLogger(__name__)
 
-FIRST_PAGE_URL = (
-    "https://myehalal.halal.gov.my/portal-halal/v1/index.php"
-    "?data=ZGlyZWN0b3J5L2luZGV4X2RpcmVjdG9yeTs7Ozs="
-)
+FIRST_PAGE_URL = "https://myehalal.halal.gov.my/portal-halal/v1/index.php?data=ZGlyZWN0b3J5L2luZGV4X2RpcmVjdG9yeTs7Ozs="
 DEFAULT_SUPPLIER_URL = FIRST_PAGE_URL
 HALAL_PORTAL_ORIGIN = "https://myehalal.halal.gov.my/portal-halal/v1/"
 HALAL_DIRECTORY_DATA = "ZGlyZWN0b3J5L2luZGV4X2RpcmVjdG9yeTs7Ozs="
@@ -49,10 +46,7 @@ def _normalize_text(value: str) -> str:
 def _directory_page_url(page: int) -> str:
     if page <= 1:
         return FIRST_PAGE_URL
-    return (
-        f"{HALAL_PORTAL_ORIGIN}index.php"
-        f"?data={HALAL_DIRECTORY_DATA}&negeri=&category=&page={page}&cari="
-    )
+    return f"{HALAL_PORTAL_ORIGIN}index.php?data={HALAL_DIRECTORY_DATA}&negeri=&category=&page={page}&cari="
 
 
 def _fetch_html(client: httpx.Client, url: str) -> str:

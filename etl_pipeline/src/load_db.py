@@ -46,14 +46,9 @@ def load_database(
 
 
 def _ensure_supplier_columns(connection: sqlite3.Connection) -> None:
-    columns = {
-        row[1]
-        for row in connection.execute("PRAGMA table_info(suppliers)").fetchall()
-    }
+    columns = {row[1] for row in connection.execute("PRAGMA table_info(suppliers)").fetchall()}
     if "company_id" not in columns:
-        connection.execute(
-            "ALTER TABLE suppliers ADD COLUMN company_id TEXT NOT NULL DEFAULT ''"
-        )
+        connection.execute("ALTER TABLE suppliers ADD COLUMN company_id TEXT NOT NULL DEFAULT ''")
 
 
 def _load_substances(connection: sqlite3.Connection, substances_csv: Path) -> int:

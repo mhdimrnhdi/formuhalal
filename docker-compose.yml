@@ -1,4 +1,10 @@
 services:
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - /usr/share/ollama/.ollama:/root/.ollama
+    restart: unless-stopped
+
   etl:
     build:
       context: ./etl_pipeline
@@ -20,10 +26,16 @@ services:
     environment:
       FRONTEND_URL: http://frontend:8000
       DB_URL: /data/database.sqlite
+      FORMULATION_RESULTS_DIR: /data/formulation_results
+      OLLAMA_URL: http://ollama:11434/api/generate
+      OLLAMA_PRESET: ${OLLAMA_PRESET:-fast}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-}
+      OLLAMA_TIMEOUT: ${OLLAMA_TIMEOUT:-3600}
     volumes:
       - ./data:/data
     depends_on:
       - etl
+      - ollama
 
   frontend:
     build:

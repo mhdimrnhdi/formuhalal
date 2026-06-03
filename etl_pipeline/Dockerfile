@@ -18,7 +18,7 @@ COPY pyproject.toml uv.lock .python-version ./
 COPY src/ ./src/
 
 RUN pip install --no-cache-dir uv==0.8.24 \
-    && uv sync --frozen
+    && uv sync --frozen --no-dev
 
 ENV PYTHONPATH=/app/src
 ENV DATA_DIR=/data

@@ -9,6 +9,11 @@ dependencies = [
     "uvicorn==0.47.0",
 ]
 
+[dependency-groups]
+dev = [
+    "ruff==0.15.15",
+]
+
 [tool.uv]
 required-version = "==0.8.24"
 
