@@ -15,6 +15,14 @@ OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.4-mini").strip()
 OPENAI_TIMEOUT = int(os.getenv("OPENAI_TIMEOUT", "120"))
 OPENAI_URL = os.getenv("OPENAI_URL", "https://api.openai.com/v1/chat/completions").strip()
 
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash").strip()
+GEMINI_TIMEOUT = int(os.getenv("GEMINI_TIMEOUT", "120"))
+GEMINI_URL = os.getenv(
+    "GEMINI_URL",
+    "https://generativelanguage.googleapis.com/v1beta/models",
+).strip()
+
 RELEVANT_FUNCTIONS = [
     "STABILIZER OR THICKENER",
     "TEXTURIZER",
@@ -271,6 +279,47 @@ def _call_openai(prompt: str) -> str:
     return text
 
 
+def _call_gemini(prompt: str) -> str:
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY is not set")
+
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.2,
+            "maxOutputTokens": 600,
+        },
+    }
+    url = f"{GEMINI_URL.rstrip('/')}/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=GEMINI_TIMEOUT) as resp:
+            out = json.load(resp)
+    except urllib.error.HTTPError as error:
+        message = error.reason
+        try:
+            body = json.load(error)
+            message = body.get("error", {}).get("message", message)
+        except (json.JSONDecodeError, AttributeError):
+            pass
+        raise RuntimeError(f"Gemini API error ({error.code}): {message}") from error
+
+    candidates = out.get("candidates") or []
+    if not candidates:
+        raise RuntimeError("Gemini returned no candidates")
+
+    parts = candidates[0].get("content", {}).get("parts") or []
+    text = "".join(part.get("text", "") for part in parts).strip()
+    if not text:
+        raise RuntimeError("Gemini returned an empty response")
+    return text
+
+
 def generate_suppliers(
     prepared_payload: dict,
     substitutes_text: str,
@@ -283,5 +332,6 @@ def generate_suppliers(
         raise RuntimeError("No supplier candidates available from database")
 
     prompt = build_supplier_prompt(prepared_payload, substitutes_text, substances, suppliers)
-    text = _call_openai(prompt)
-    return text, OPENAI_MODEL
+    if GEMINI_API_KEY:
+        return _call_gemini(prompt), GEMINI_MODEL
+    return _call_openai(prompt), OPENAI_MODEL
