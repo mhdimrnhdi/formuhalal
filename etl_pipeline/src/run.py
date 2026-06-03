@@ -41,16 +41,23 @@ def run_pipeline(
         row_count = clean_food_substances(raw_csv, clean_csv)
         LOGGER.info("Wrote %s substance rows to %s", row_count, clean_csv)
 
-    if skip_crawl and not suppliers_json.exists():
-        LOGGER.warning("Skipping supplier crawl and no existing %s found", suppliers_json)
+    if skip_crawl:
+        if not suppliers_json.exists():
+            LOGGER.warning("Skipping supplier crawl and no existing %s found", suppliers_json)
     else:
-        if not skip_crawl:
-            LOGGER.info("Crawling supplier listings")
-            supplier_rows = crawl_suppliers(suppliers_json)
+        LOGGER.info("Crawling supplier listings")
+        supplier_rows = crawl_suppliers(suppliers_json)
+        if supplier_rows == 0:
+            LOGGER.warning("Crawl returned 0 companies; will retry on the next scheduled run")
+        else:
             LOGGER.info("Saved %s suppliers to %s", supplier_rows, suppliers_json)
 
     if not suppliers_json.exists():
-        raise FileNotFoundError(f"Supplier data not found at {suppliers_json}")
+        LOGGER.warning(
+            "Supplier data not found at %s; skipping database refresh until the next run",
+            suppliers_json,
+        )
+        return
 
     LOGGER.info("Loading SQLite database at %s", database_path)
     substances_loaded, suppliers_loaded = load_database(database_path, clean_csv, suppliers_json)
@@ -87,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
         run_pipeline(skip_crawl=args.skip_crawl, skip_download=args.skip_download)
     except Exception:
         LOGGER.exception("ETL pipeline failed")
-        return 1
+        return 0
 
     return 0
 

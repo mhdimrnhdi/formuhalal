@@ -33,8 +33,6 @@ def _halal_portal_ssl_context() -> ssl.SSLContext:
     context = ssl.create_default_context()
     context.minimum_version = ssl.TLSVersion.TLSv1_2
     context.maximum_version = ssl.TLSVersion.TLSv1_2
-    # The My e-Halal portal currently negotiates a TLS 1.2 static RSA cipher
-    # that Python's modern OpenSSL defaults may not offer.
     context.set_ciphers("AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384")
     return context
 
@@ -106,8 +104,6 @@ def _crawl_halal_directory(client: httpx.Client) -> list[dict[str, str]]:
         soup = BeautifulSoup(page_html, "html.parser")
 
         companies = _extract_companies(soup, page_url)
-        for company in companies:
-            by_id[company["id"]] = company
 
         LOGGER.info(
             "Page %s/%s: %s companies (%s total)",
@@ -117,11 +113,17 @@ def _crawl_halal_directory(client: httpx.Client) -> list[dict[str, str]]:
             len(by_id),
         )
 
+        if not companies:
+            LOGGER.info("Page %s returned 0 companies; stopping crawl", page)
+            break
+
+        for company in companies:
+            by_id[company["id"]] = company
+
     return list(by_id.values())
 
 
 def crawl_suppliers(output_path: Path, source_url: str | None = None) -> int:
-    # Treat unset or blank SUPPLIER_CRAWL_URL as missing (docker-compose may pass "").
     target_url = source_url or os.getenv("SUPPLIER_CRAWL_URL") or DEFAULT_SUPPLIER_URL
     is_halal_portal = "myehalal.halal.gov.my" in target_url
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -139,7 +141,12 @@ def crawl_suppliers(output_path: Path, source_url: str | None = None) -> int:
             suppliers = _extract_companies(soup, target_url)
 
     if not suppliers:
-        raise RuntimeError(f"No companies extracted from {target_url}")
+        LOGGER.warning(
+            "No companies extracted from %s; keeping existing supplier data and "
+            "waiting for the next scheduled crawl",
+            target_url,
+        )
+        return 0
 
     payload = {
         "scraped_at": datetime.now(UTC).isoformat(),
