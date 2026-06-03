@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -8,6 +9,11 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 OLLAMA_PRESET = os.getenv("OLLAMA_PRESET", "fast")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "").strip()
 OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "3600"))
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.4-mini").strip()
+OPENAI_TIMEOUT = int(os.getenv("OPENAI_TIMEOUT", "120"))
+OPENAI_URL = os.getenv("OPENAI_URL", "https://api.openai.com/v1/chat/completions").strip()
 
 RELEVANT_FUNCTIONS = [
     "STABILIZER OR THICKENER",
@@ -116,3 +122,166 @@ def save_substitutes_text(text: str, output_path: Path) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(text, encoding="utf-8")
     return output_path
+
+
+_LINE_SEP = r" - "
+NUMBERED_LINE = re.compile(rf"^\d+\.\s*(.+?){_LINE_SEP}(.+)$")
+NUMBERED_SUPPLIER_LINE = re.compile(rf"^\d+\.\s*(.+?){_LINE_SEP}(.+){_LINE_SEP}(.+)$")
+
+MALAYSIA_STATE_SUFFIX = re.compile(
+    r"\s*\((?:"
+    r"Selangor|"
+    r"Pulau Pinang|Penang|"
+    r"Johor|Kedah|Kelantan|"
+    r"Melaka|Malacca|"
+    r"Negeri Sembilan|"
+    r"Pahang|Perak|Perlis|"
+    r"Sabah|Sarawak|"
+    r"Kuala Lumpur|"
+    r"Labuan|Putrajaya|"
+    r"Terengganu|"
+    r"Wilayah Persekutuan"
+    r")\)\s*$",
+    flags=re.IGNORECASE,
+)
+
+
+def parse_substitute_substances(substitutes_text: str) -> list[str]:
+    return [entry["substance"] for entry in parse_substitute_entries(substitutes_text)]
+
+
+def parse_substitute_entries(substitutes_text: str) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    for line in substitutes_text.strip().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        match = NUMBERED_LINE.match(line)
+        if not match:
+            continue
+        entries.append(
+            {
+                "substance": match.group(1).strip(),
+                "explanation": match.group(2).strip(),
+            }
+        )
+    return entries
+
+
+def parse_supplier_company_name(supplier_segment: str) -> str:
+    name = supplier_segment.strip()
+    without_state = MALAYSIA_STATE_SUFFIX.sub("", name)
+    return without_state.strip() or name
+
+
+def parse_supplier_entries(suppliers_text: str) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    for line in suppliers_text.strip().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        match = NUMBERED_SUPPLIER_LINE.match(line)
+        if not match:
+            continue
+        supplier_segment = match.group(2).strip()
+        entries.append(
+            {
+                "substance": match.group(1).strip(),
+                "company_name": parse_supplier_company_name(supplier_segment),
+                "supplier_segment": supplier_segment,
+                "reason": match.group(3).strip(),
+            }
+        )
+    return entries
+
+
+def build_supplier_prompt(
+    prepared_payload: dict,
+    substitutes_text: str,
+    substances: list[str],
+    suppliers: list[dict],
+) -> str:
+    inp = prepared_payload["input"]
+    supplier_lines = []
+    for index, supplier in enumerate(suppliers, start=1):
+        location = supplier.get("location", "").strip()
+        location_hint = location.split()[-2:] if location else []
+        location_label = " ".join(location_hint) if location_hint else "Malaysia"
+        supplier_lines.append(
+            f"{index}. {supplier['name']} | {location_label} | {supplier.get('certifications', 'JAKIM Halal Directory')}"
+        )
+
+    suppliers_block = "\n".join(supplier_lines)
+    substance_list = ", ".join(substances) if substances else "the substitutes below"
+
+    return f"""You are a Halal ingredient sourcing advisor for Malaysian SME food manufacturers.
+
+PRODUCT: {inp["product_name"]}
+SUBSTITUTES TO SOURCE:
+{substitutes_text.strip()}
+
+JAKIM HALAL DIRECTORY SUPPLIERS (pick ONLY from this list):
+{suppliers_block}
+
+For each substitute ({substance_list}), recommend ONE supplier from the list above that is most likely to sell that substance. The same supplier may supply multiple substances.
+
+Format: numbered list matching the substitutes, one line each:
+1. SUBSTANCE NAME - SUPPLIER NAME (State) - one short reason
+No intro or outro."""
+
+
+def _call_openai(prompt: str) -> str:
+    if not OPENAI_API_KEY:
+        raise RuntimeError("OPENAI_API_KEY is not set")
+
+    payload = {
+        "model": OPENAI_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.2,
+        "max_completion_tokens": 600,
+    }
+    req = urllib.request.Request(
+        OPENAI_URL,
+        data=json.dumps(payload).encode(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=OPENAI_TIMEOUT) as resp:
+            out = json.load(resp)
+    except urllib.error.HTTPError as error:
+        message = error.reason
+        try:
+            body = json.load(error)
+            message = body.get("error", {}).get("message", message)
+        except (json.JSONDecodeError, AttributeError):
+            pass
+        raise RuntimeError(f"OpenAI API error ({error.code}): {message}") from error
+
+    choices = out.get("choices") or []
+    if not choices:
+        raise RuntimeError("OpenAI returned no choices")
+
+    text = choices[0].get("message", {}).get("content", "").strip()
+    if not text:
+        raise RuntimeError("OpenAI returned an empty response")
+    return text
+
+
+def generate_suppliers(
+    prepared_payload: dict,
+    substitutes_text: str,
+    suppliers: list[dict],
+) -> tuple[str, str]:
+    substances = parse_substitute_substances(substitutes_text)
+    if not substances:
+        raise RuntimeError("No substitute substances found in substitutes text")
+    if not suppliers:
+        raise RuntimeError("No supplier candidates available from database")
+
+    prompt = build_supplier_prompt(prepared_payload, substitutes_text, substances, suppliers)
+    text = _call_openai(prompt)
+    return text, OPENAI_MODEL

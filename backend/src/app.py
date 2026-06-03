@@ -12,7 +12,14 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-from .llm import generate_substitutes, save_substitutes_text
+from .llm import (
+    generate_substitutes,
+    generate_suppliers,
+    parse_substitute_entries,
+    parse_substitute_substances,
+    parse_supplier_entries,
+    save_substitutes_text,
+)
 
 load_dotenv()
 
@@ -137,6 +144,148 @@ def _clean_formulation_result(value: Any) -> Any:
     return value
 
 
+SUPPLIER_KEYWORDS = (
+    "INGREDIENT",
+    "CHEMICAL",
+    "ADDITIVE",
+    "FOOD SUPPLY",
+    "FOODSTUFF",
+    "FOOD SUPPLIES",
+    "GELLING",
+    "THICKEN",
+)
+
+
+def _find_supplier_candidates(
+    connection: sqlite3.Connection,
+    substances: list[str],
+    *,
+    limit: int = 150,
+) -> list[dict]:
+    keywords = list(SUPPLIER_KEYWORDS)
+    for substance in substances:
+        keywords.extend(part for part in re.split(r"[\s(,]+", substance) if len(part) >= 4)
+
+    normalized_keywords = {_normalize(keyword) for keyword in keywords if keyword}
+    candidates: list[dict] = []
+    seen_names: set[str] = set()
+
+    rows = connection.execute(
+        """
+        SELECT company_id, name, location, certifications
+        FROM suppliers
+        ORDER BY name
+        """
+    ).fetchall()
+
+    for row in rows:
+        name = row["name"]
+        if name in seen_names:
+            continue
+
+        haystack = _normalize(name)
+        if any(keyword in haystack for keyword in normalized_keywords):
+            seen_names.add(name)
+            candidates.append(
+                {
+                    "company_id": row["company_id"],
+                    "name": name,
+                    "location": row["location"],
+                    "certifications": row["certifications"],
+                }
+            )
+            if len(candidates) >= limit:
+                break
+
+    return candidates
+
+
+def _lookup_supplier_by_name(connection: sqlite3.Connection, company_name: str) -> dict | None:
+    normalized_name = _normalize(company_name)
+    if not normalized_name:
+        return None
+
+    row = connection.execute(
+        """
+        SELECT company_id, name, location, certifications, source_url
+        FROM suppliers
+        WHERE lower(trim(name)) = lower(trim(?))
+        ORDER BY id
+        LIMIT 1
+        """,
+        (company_name,),
+    ).fetchone()
+
+    if row:
+        return {
+            "company_id": row["company_id"],
+            "name": row["name"],
+            "location": row["location"],
+            "certifications": row["certifications"],
+            "source_url": row["source_url"],
+        }
+
+    rows = connection.execute(
+        """
+        SELECT company_id, name, location, certifications, source_url
+        FROM suppliers
+        ORDER BY name
+        """
+    ).fetchall()
+    for candidate in rows:
+        if _normalize(candidate["name"]) == normalized_name:
+            return {
+                "company_id": candidate["company_id"],
+                "name": candidate["name"],
+                "location": candidate["location"],
+                "certifications": candidate["certifications"],
+                "source_url": candidate["source_url"],
+            }
+
+    return None
+
+
+def _build_recommendations(
+    connection: sqlite3.Connection,
+    substitutes_text: str,
+    suppliers_text: str,
+) -> list[dict]:
+    substitute_by_substance = {
+        _normalize(entry["substance"]): entry for entry in parse_substitute_entries(substitutes_text)
+    }
+    recommendations: list[dict] = []
+
+    for supplier_entry in parse_supplier_entries(suppliers_text):
+        substance = supplier_entry["substance"]
+        normalized_substance = _normalize(substance)
+        substitute_entry = substitute_by_substance.get(normalized_substance)
+        explanation = substitute_entry["explanation"] if substitute_entry else ""
+
+        company_name = supplier_entry["company_name"]
+        supplier_record = _lookup_supplier_by_name(connection, company_name)
+        recommendations.append(
+            {
+                "substance": substance,
+                "explanation": explanation,
+                "supplier_reason": supplier_entry["reason"],
+                "supplier": {
+                    "name": company_name,
+                    "location": supplier_record["location"] if supplier_record else "",
+                    "certifications": supplier_record["certifications"] if supplier_record else "",
+                    "source_url": supplier_record["source_url"] if supplier_record else "",
+                    "matched_in_database": supplier_record is not None,
+                    **(
+                        {"company_id": supplier_record["company_id"]}
+                        if supplier_record and supplier_record.get("company_id")
+                        else {}
+                    ),
+                },
+            }
+        )
+
+    return recommendations
+
+
 def _dedupe_substance_names(substances: list[dict]) -> list[str]:
     names: list[str] = []
     seen: set[str] = set()
@@ -242,6 +391,56 @@ def formulation():
             "error": str(error),
             "substitutes_txt": str(substitutes_txt_path),
         }
+
+    supplier_txt_path = RESULTS_DIR / f"{key_hash_number}_supplier.txt"
+    substitutes_for_suppliers = prepared_payload.get("llm_substitutes", {}).get("text", "")
+    if not substitutes_for_suppliers and substitutes_txt_path.exists():
+        substitutes_for_suppliers = substitutes_txt_path.read_text(encoding="utf-8")
+
+    if substitutes_for_suppliers.strip():
+        try:
+            with _connect_db() as connection:
+                substances = parse_substitute_substances(substitutes_for_suppliers)
+                supplier_candidates = _find_supplier_candidates(connection, substances)
+
+            suppliers_text, model_name = generate_suppliers(
+                prepared_payload,
+                substitutes_for_suppliers,
+                supplier_candidates,
+            )
+            save_substitutes_text(suppliers_text, supplier_txt_path)
+            prepared_payload["llm_suppliers"] = {
+                "model": model_name,
+                "supplier_txt": str(supplier_txt_path),
+                "text": suppliers_text,
+            }
+        except (urllib.error.URLError, TimeoutError, RuntimeError, json.JSONDecodeError) as error:
+            prepared_payload["llm_suppliers"] = {
+                "error": str(error),
+                "supplier_txt": str(supplier_txt_path),
+            }
+
+    suppliers_text = prepared_payload.get("llm_suppliers", {}).get("text", "")
+    if not suppliers_text and supplier_txt_path.exists():
+        suppliers_text = supplier_txt_path.read_text(encoding="utf-8")
+
+    substitutes_text = prepared_payload.get("llm_substitutes", {}).get("text", "")
+    if not substitutes_text and substitutes_txt_path.exists():
+        substitutes_text = substitutes_txt_path.read_text(encoding="utf-8")
+
+    if suppliers_text.strip() and substitutes_text.strip():
+        try:
+            with _connect_db() as connection:
+                prepared_payload["recommendations"] = _build_recommendations(
+                    connection,
+                    substitutes_text,
+                    suppliers_text,
+                )
+        except sqlite3.Error as error:
+            prepared_payload["recommendations"] = []
+            prepared_payload["recommendations_error"] = f"Supplier enrichment failed: {error}"
+    else:
+        prepared_payload["recommendations"] = []
 
     _save_result(prepared_payload, key_hash_number, "_prepared")
 

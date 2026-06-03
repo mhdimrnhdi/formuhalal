@@ -65,3 +65,4 @@ notes/
 
 # Optional local backend data copies
 /backend/data/
+data/raw/suppliers.json
