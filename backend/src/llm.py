@@ -265,7 +265,7 @@ def _call_openai(prompt: str) -> str:
         try:
             body = json.load(error)
             message = body.get("error", {}).get("message", message)
-        except (json.JSONDecodeError, AttributeError):
+        except json.JSONDecodeError, AttributeError:
             pass
         raise RuntimeError(f"OpenAI API error ({error.code}): {message}") from error
 
@@ -305,7 +305,7 @@ def _call_gemini(prompt: str) -> str:
         try:
             body = json.load(error)
             message = body.get("error", {}).get("message", message)
-        except (json.JSONDecodeError, AttributeError):
+        except json.JSONDecodeError, AttributeError:
             pass
         raise RuntimeError(f"Gemini API error ({error.code}): {message}") from error
 

@@ -142,8 +142,7 @@ def crawl_suppliers(output_path: Path, source_url: str | None = None) -> int:
 
     if not suppliers:
         LOGGER.warning(
-            "No companies extracted from %s; keeping existing supplier data and "
-            "waiting for the next scheduled crawl",
+            "No companies extracted from %s; keeping existing supplier data and waiting for the next scheduled crawl",
             target_url,
         )
         return 0
