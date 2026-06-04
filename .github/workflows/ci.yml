@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.8.24"
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install dev tools
+        run: uv sync --group dev --frozen
+
+      - name: Ruff lint
+        run: |
+          uv run --group dev ruff check \
+            backend/src \
+            frontend/src \
+            frontend/dev.py \
+            etl_pipeline/src
+
+      - name: Ruff format check
+        run: |
+          uv run --group dev ruff format --check \
+            backend/src \
+            frontend/src \
+            frontend/dev.py \
+            etl_pipeline/src
+
+  python-services:
+    name: Python deps (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [backend, frontend, etl_pipeline]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.8.24"
+          enable-cache: true
+          cache-dependency-path: ${{ matrix.service }}/uv.lock
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Sync locked dependencies
+        working-directory: ${{ matrix.service }}
+        run: uv sync --frozen --group dev
+
+  frontend-build:
+    name: Frontend CSS build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build Tailwind CSS
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload frontend dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 1
+
+  docker:
+    name: Docker images
+    runs-on: ubuntu-latest
+    needs: [frontend-build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build compose services
+        run: docker compose build backend frontend etl
