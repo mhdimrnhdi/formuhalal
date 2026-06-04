@@ -22,6 +22,16 @@ def about(request: Request):
     return templates.TemplateResponse(request, "about.html", {})
 
 
+@app.get("/terms")
+def terms(request: Request):
+    return templates.TemplateResponse(request, "terms.html", {})
+
+
+@app.get("/privacy")
+def privacy(request: Request):
+    return templates.TemplateResponse(request, "privacy.html", {})
+
+
 @app.get("/formulation")
 def formulation(request: Request):
     backend_url = os.getenv("PUBLIC_BACKEND_URL", "http://localhost:8001")
