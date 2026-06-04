@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 app = FastAPI()
 
 app.mount("/dist", StaticFiles(directory=Path(__file__).parent.parent / "dist"), name="dist")
+app.mount("/assets", StaticFiles(directory=Path(__file__).parent.parent / "dist" / "assets"), name="assets")
 
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
