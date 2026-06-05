@@ -22,7 +22,6 @@ env/
 # Packaging / build artifacts
 *.egg-info/
 build/
-dist/
 
 # Node (frontend CSS toolchain)
 node_modules/
