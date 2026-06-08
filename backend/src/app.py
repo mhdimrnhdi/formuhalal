@@ -34,6 +34,11 @@ DB_PATH = Path(os.getenv("DB_URL", "/data/database.sqlite"))
 RESULTS_DIR = Path(os.getenv("FORMULATION_RESULTS_DIR", "/data/formulation_results"))
 FORMULATION_RESULT_CLEAN_KEYS = {"id", "other_names", "matched_used_for"}
 
+HARAM_KEYWORDS = {
+    "pork", "lard", "bacon", "ham", "wine", "alcohol", "beer", "rum", "liquor",
+    "vodka", "whiskey", "blood", "carrion", "dog", "pig", "swine"
+}
+
 
 def _get_required_text(data: dict, *keys: str) -> str:
     for key in keys:
@@ -49,8 +54,9 @@ def _get_bearer_key() -> str:
     return match.group(1).strip() if match else ""
 
 
-def _hash_key(bearer_key: str) -> str:
-    digest = hashlib.sha256(bearer_key.encode("utf-8")).hexdigest()
+def _hash_key(bearer_key: str, product_name: str, ingredients: str, substitute_for: str) -> str:
+    combined = f"{bearer_key}:{product_name.strip().lower()}:{ingredients.strip().lower()}:{substitute_for.strip().lower()}"
+    digest = hashlib.sha256(combined.encode("utf-8")).hexdigest()
     return str(int(digest[:16], 16))
 
 
@@ -183,19 +189,17 @@ def _find_supplier_candidates(
         if name in seen_names:
             continue
 
-        haystack = _normalize(name)
-        if any(keyword in haystack for keyword in normalized_keywords):
-            seen_names.add(name)
-            candidates.append(
-                {
-                    "company_id": row["company_id"],
-                    "name": name,
-                    "location": row["location"],
-                    "certifications": row["certifications"],
-                }
-            )
-            if len(candidates) >= limit:
-                break
+        seen_names.add(name)
+        candidates.append(
+            {
+                "company_id": row["company_id"],
+                "name": name,
+                "location": row["location"],
+                "certifications": row["certifications"],
+            }
+        )
+        if len(candidates) >= limit:
+            break
 
     return candidates
 
@@ -259,10 +263,18 @@ def _build_recommendations(
         substance = supplier_entry["substance"]
         normalized_substance = _normalize(substance)
         substitute_entry = substitute_by_substance.get(normalized_substance)
-        explanation = substitute_entry["explanation"] if substitute_entry else ""
+        if not substitute_entry:
+            continue
+            
+        explanation = substitute_entry["explanation"]
 
         company_name = supplier_entry["company_name"]
         supplier_record = _lookup_supplier_by_name(connection, company_name)
+        
+        # STRICT VERIFICATION: drop if not matched in DB
+        if not supplier_record:
+            continue
+
         recommendations.append(
             {
                 "substance": substance,
@@ -270,15 +282,11 @@ def _build_recommendations(
                 "supplier_reason": supplier_entry["reason"],
                 "supplier": {
                     "name": company_name,
-                    "location": supplier_record["location"] if supplier_record else "",
-                    "certifications": supplier_record["certifications"] if supplier_record else "",
-                    "source_url": supplier_record["source_url"] if supplier_record else "",
-                    "matched_in_database": supplier_record is not None,
-                    **(
-                        {"company_id": supplier_record["company_id"]}
-                        if supplier_record and supplier_record.get("company_id")
-                        else {}
-                    ),
+                    "location": supplier_record["location"],
+                    "certifications": supplier_record["certifications"],
+                    "source_url": supplier_record["source_url"],
+                    "matched_in_database": True,
+                    "company_id": supplier_record["company_id"]
                 },
             }
         )
@@ -334,20 +342,27 @@ def formulation():
     if not product_name or not ingredients or not substitute_for:
         return jsonify({"error": "product_name, ingredients, and substitute_for are required"}), 400
 
+    context_text = f"{product_name} {ingredients}".lower()
+    if any(keyword in context_text for keyword in HARAM_KEYWORDS):
+        return jsonify({"error": "Error: Haram ingredients or products are strictly prohibited."}), 400
+
     if not bearer_key:
         return jsonify({"error": "Authorization header must be in the format: Bearer <key>"}), 401
 
     if not DB_PATH.exists():
         return jsonify({"error": f"Database not found at {DB_PATH}"}), 503
 
-    key_hash_number = _hash_key(bearer_key)
+    key_hash_number = _hash_key(bearer_key, product_name, ingredients, substitute_for)
 
     try:
         with _connect_db() as connection:
             target_row, matched_on = _find_target_substance(connection, substitute_for)
-            target = _row_to_substance(target_row) if target_row else None
-            used_for_values = target["used_for"] if target else []
-            alternatives = _find_substances_by_used_for(connection, used_for_values, target["id"] if target else None)
+            if not target_row:
+                return jsonify({"error": "Ingredient not recognized as a valid food substance in the database."}), 400
+
+            target = _row_to_substance(target_row)
+            used_for_values = target["used_for"]
+            alternatives = _find_substances_by_used_for(connection, used_for_values, target["id"])
     except sqlite3.Error as error:
         return jsonify({"error": f"Database lookup failed: {error}"}), 503
 
@@ -378,19 +393,27 @@ def formulation():
     prepared_payload = _prepare_formulation_result(payload)
 
     substitutes_txt_path = RESULTS_DIR / f"{key_hash_number}_substitutes.txt"
-    try:
-        substitutes_text, model_name = generate_substitutes(prepared_payload)
-        save_substitutes_text(substitutes_text, substitutes_txt_path)
+    if substitutes_txt_path.exists():
+        substitutes_text = substitutes_txt_path.read_text(encoding="utf-8")
         prepared_payload["llm_substitutes"] = {
-            "model": model_name,
+            "model": "cached",
             "substitutes_txt": str(substitutes_txt_path),
             "text": substitutes_text,
         }
-    except (urllib.error.URLError, TimeoutError, RuntimeError, json.JSONDecodeError) as error:
-        prepared_payload["llm_substitutes"] = {
-            "error": str(error),
-            "substitutes_txt": str(substitutes_txt_path),
-        }
+    else:
+        try:
+            substitutes_text, model_name = generate_substitutes(prepared_payload)
+            save_substitutes_text(substitutes_text, substitutes_txt_path)
+            prepared_payload["llm_substitutes"] = {
+                "model": model_name,
+                "substitutes_txt": str(substitutes_txt_path),
+                "text": substitutes_text,
+            }
+        except (urllib.error.URLError, TimeoutError, RuntimeError, json.JSONDecodeError) as error:
+            prepared_payload["llm_substitutes"] = {
+                "error": str(error),
+                "substitutes_txt": str(substitutes_txt_path),
+            }
 
     supplier_txt_path = RESULTS_DIR / f"{key_hash_number}_supplier.txt"
     substitutes_for_suppliers = prepared_payload.get("llm_substitutes", {}).get("text", "")
@@ -398,27 +421,36 @@ def formulation():
         substitutes_for_suppliers = substitutes_txt_path.read_text(encoding="utf-8")
 
     if substitutes_for_suppliers.strip():
-        try:
-            with _connect_db() as connection:
-                substances = parse_substitute_substances(substitutes_for_suppliers)
-                supplier_candidates = _find_supplier_candidates(connection, substances)
-
-            suppliers_text, model_name = generate_suppliers(
-                prepared_payload,
-                substitutes_for_suppliers,
-                supplier_candidates,
-            )
-            save_substitutes_text(suppliers_text, supplier_txt_path)
+        if supplier_txt_path.exists():
+            suppliers_text = supplier_txt_path.read_text(encoding="utf-8")
             prepared_payload["llm_suppliers"] = {
-                "model": model_name,
+                "model": "cached",
                 "supplier_txt": str(supplier_txt_path),
                 "text": suppliers_text,
             }
-        except (urllib.error.URLError, TimeoutError, RuntimeError, json.JSONDecodeError) as error:
-            prepared_payload["llm_suppliers"] = {
-                "error": str(error),
-                "supplier_txt": str(supplier_txt_path),
-            }
+        else:
+            try:
+                with _connect_db() as connection:
+                    substances = parse_substitute_substances(substitutes_for_suppliers)
+                    limit = int(os.getenv("SUPPLIER_LIMIT", "150"))
+                    supplier_candidates = _find_supplier_candidates(connection, substances, limit=limit)
+
+                suppliers_text, model_name = generate_suppliers(
+                    prepared_payload,
+                    substitutes_for_suppliers,
+                    supplier_candidates,
+                )
+                save_substitutes_text(suppliers_text, supplier_txt_path)
+                prepared_payload["llm_suppliers"] = {
+                    "model": model_name,
+                    "supplier_txt": str(supplier_txt_path),
+                    "text": suppliers_text,
+                }
+            except (urllib.error.URLError, TimeoutError, RuntimeError, json.JSONDecodeError) as error:
+                prepared_payload["llm_suppliers"] = {
+                    "error": str(error),
+                    "supplier_txt": str(supplier_txt_path),
+                }
 
     suppliers_text = prepared_payload.get("llm_suppliers", {}).get("text", "")
     if not suppliers_text and supplier_txt_path.exists():

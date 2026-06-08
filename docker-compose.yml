@@ -34,6 +34,10 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.4-mini}
       OPENAI_TIMEOUT: ${OPENAI_TIMEOUT:-120}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      GEMINI_TIMEOUT: ${GEMINI_TIMEOUT:-120}
+      SUPPLIER_LIMIT: ${SUPPLIER_LIMIT:-150}
     volumes:
       - ./data:/data
     depends_on:

@@ -115,6 +115,10 @@ def _call_ollama(model: str, prompt: str, *, num_ctx: int, num_predict: int) -> 
 def generate_substitutes(prepared_payload: dict) -> tuple[str, str]:
     config = _preset_config()
     prompt = build_substitute_prompt(prepared_payload, config["cap"])
+    
+    if GEMINI_API_KEY:
+        return _call_gemini(prompt), GEMINI_MODEL
+
     text = _call_ollama(
         config["model"],
         prompt,
@@ -132,24 +136,12 @@ def save_substitutes_text(text: str, output_path: Path) -> Path:
     return output_path
 
 
-_LINE_SEP = r" - "
-NUMBERED_LINE = re.compile(rf"^\d+\.\s*(.+?){_LINE_SEP}(.+)$")
-NUMBERED_SUPPLIER_LINE = re.compile(rf"^\d+\.\s*(.+?){_LINE_SEP}(.+){_LINE_SEP}(.+)$")
+_LINE_SEP = r"(?:\s+-\s+|\s*:\s+)"
+NUMBERED_LINE = re.compile(rf"^(?:\d+\.|-|\*)\s*(.+?){_LINE_SEP}(.+)$")
+NUMBERED_SUPPLIER_LINE = re.compile(rf"^(?:\d+\.|-|\*)\s*(.+?){_LINE_SEP}(.+?){_LINE_SEP}(.+)$")
 
 MALAYSIA_STATE_SUFFIX = re.compile(
-    r"\s*\((?:"
-    r"Selangor|"
-    r"Pulau Pinang|Penang|"
-    r"Johor|Kedah|Kelantan|"
-    r"Melaka|Malacca|"
-    r"Negeri Sembilan|"
-    r"Pahang|Perak|Perlis|"
-    r"Sabah|Sarawak|"
-    r"Kuala Lumpur|"
-    r"Labuan|Putrajaya|"
-    r"Terengganu|"
-    r"Wilayah Persekutuan"
-    r")\)\s*$",
+    r"\s*\([^)]+\)\s*$",
     flags=re.IGNORECASE,
 )
 
