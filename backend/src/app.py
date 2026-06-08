@@ -35,14 +35,37 @@ RESULTS_DIR = Path(os.getenv("FORMULATION_RESULTS_DIR", "/data/formulation_resul
 FORMULATION_RESULT_CLEAN_KEYS = {"id", "other_names", "matched_used_for"}
 
 HARAM_KEYWORDS = {
-    "pork", "lard", "bacon", "ham", "wine", "alcohol", "beer", "rum", "liquor",
-    "vodka", "whiskey", "blood", "carrion", "dog", "pig", "swine"
+    "pork",
+    "lard",
+    "bacon",
+    "ham",
+    "wine",
+    "alcohol",
+    "beer",
+    "rum",
+    "liquor",
+    "vodka",
+    "whiskey",
+    "blood",
+    "carrion",
+    "dog",
+    "pig",
+    "swine",
 }
 
 JAILBREAK_KEYWORDS = {
-    "ignore previous", "ignore all", "system prompt", "forget previous", 
-    "override", "bypass", "jailbreak", "do not follow", "disregard", 
-    "act as", "you are now", "developer mode"
+    "ignore previous",
+    "ignore all",
+    "system prompt",
+    "forget previous",
+    "override",
+    "bypass",
+    "jailbreak",
+    "do not follow",
+    "disregard",
+    "act as",
+    "you are now",
+    "developer mode",
 }
 
 
@@ -61,7 +84,9 @@ def _get_bearer_key() -> str:
 
 
 def _hash_key(bearer_key: str, product_name: str, ingredients: str, substitute_for: str) -> str:
-    combined = f"{bearer_key}:{product_name.strip().lower()}:{ingredients.strip().lower()}:{substitute_for.strip().lower()}"
+    combined = (
+        f"{bearer_key}:{product_name.strip().lower()}:{ingredients.strip().lower()}:{substitute_for.strip().lower()}"
+    )
     digest = hashlib.sha256(combined.encode("utf-8")).hexdigest()
     return str(int(digest[:16], 16))
 
@@ -178,7 +203,6 @@ def _find_supplier_candidates(
     for substance in substances:
         keywords.extend(part for part in re.split(r"[\s(,]+", substance) if len(part) >= 4)
 
-
     candidates: list[dict] = []
     seen_names: set[str] = set()
 
@@ -271,12 +295,12 @@ def _build_recommendations(
         substitute_entry = substitute_by_substance.get(normalized_substance)
         if not substitute_entry:
             continue
-            
+
         explanation = substitute_entry["explanation"]
 
         company_name = supplier_entry["company_name"]
         supplier_record = _lookup_supplier_by_name(connection, company_name)
-        
+
         # STRICT VERIFICATION: drop if not matched in DB
         if not supplier_record:
             continue
@@ -292,7 +316,7 @@ def _build_recommendations(
                     "certifications": supplier_record["certifications"],
                     "source_url": supplier_record["source_url"],
                     "matched_in_database": True,
-                    "company_id": supplier_record["company_id"]
+                    "company_id": supplier_record["company_id"],
                 },
             }
         )
@@ -349,10 +373,10 @@ def formulation():
         return jsonify({"error": "product_name, ingredients, and substitute_for are required"}), 400
 
     context_text = f"{product_name} {ingredients} {substitute_for}".lower()
-    
+
     if any(keyword in context_text for keyword in HARAM_KEYWORDS):
         return jsonify({"error": "Error: Haram ingredients or products are strictly prohibited."}), 400
-        
+
     if any(keyword in context_text for keyword in JAILBREAK_KEYWORDS):
         return jsonify({"error": "Error: Invalid input format. Prompt injection detected."}), 400
 

@@ -115,7 +115,7 @@ def _call_ollama(model: str, prompt: str, *, num_ctx: int, num_predict: int) -> 
 def generate_substitutes(prepared_payload: dict) -> tuple[str, str]:
     config = _preset_config()
     prompt = build_substitute_prompt(prepared_payload, config["cap"])
-    
+
     if GEMINI_API_KEY:
         return _call_gemini(prompt), GEMINI_MODEL
 
