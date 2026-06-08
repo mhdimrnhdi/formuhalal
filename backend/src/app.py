@@ -39,6 +39,12 @@ HARAM_KEYWORDS = {
     "vodka", "whiskey", "blood", "carrion", "dog", "pig", "swine"
 }
 
+JAILBREAK_KEYWORDS = {
+    "ignore previous", "ignore all", "system prompt", "forget previous", 
+    "override", "bypass", "jailbreak", "do not follow", "disregard", 
+    "act as", "you are now", "developer mode"
+}
+
 
 def _get_required_text(data: dict, *keys: str) -> str:
     for key in keys:
@@ -342,9 +348,13 @@ def formulation():
     if not product_name or not ingredients or not substitute_for:
         return jsonify({"error": "product_name, ingredients, and substitute_for are required"}), 400
 
-    context_text = f"{product_name} {ingredients}".lower()
+    context_text = f"{product_name} {ingredients} {substitute_for}".lower()
+    
     if any(keyword in context_text for keyword in HARAM_KEYWORDS):
         return jsonify({"error": "Error: Haram ingredients or products are strictly prohibited."}), 400
+        
+    if any(keyword in context_text for keyword in JAILBREAK_KEYWORDS):
+        return jsonify({"error": "Error: Invalid input format. Prompt injection detected."}), 400
 
     if not bearer_key:
         return jsonify({"error": "Authorization header must be in the format: Bearer <key>"}), 401
