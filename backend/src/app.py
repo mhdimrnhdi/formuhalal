@@ -178,7 +178,7 @@ def _find_supplier_candidates(
     for substance in substances:
         keywords.extend(part for part in re.split(r"[\s(,]+", substance) if len(part) >= 4)
 
-    normalized_keywords = {_normalize(keyword) for keyword in keywords if keyword}
+
     candidates: list[dict] = []
     seen_names: set[str] = set()
 
