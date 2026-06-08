@@ -1,35 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Formulation Tool - FormuHalal</title>
-    <link rel="stylesheet" href="/dist/styles.css">
+    <link rel="stylesheet" href="/dist/styles.css?v=4">
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
+
 <body class="flex flex-col min-h-screen pattern-bg" x-data="formulationApp">
-<script>
-document.addEventListener('alpine:init', () => {
-    Alpine.data('formulationApp', () => ({
-        backendUrl: {{ backend_url | tojson }},
-        tempUserId: '',
-        productName: '',
-        ingredients: '',
-        substituteFor: '',
-        isLoading: false,
-        hasResults: false,
-        showToast: false,
-        toastMessage: '',
-        toastType: 'success',
-        errors: { productName: '', ingredients: '', substituteFor: '' },
-        
-        originalIngredient: '',
-        targetSubstance: null,
-        recommendations: [],
-        storedJson: '',
-        requestHashNumber: '',
-        
-        showError(message) { this.toastMessage = message; this.toastType = 'error'; this.showToast = true; setTimeout(() => this.showToast = false, 4000); },
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('formulationApp', () => ({
+                backendUrl: {{ backend_url | tojson }},
+            tempUserId: '',
+            productName: '',
+            ingredients: '',
+            substituteFor: '',
+            isLoading: false,
+            hasResults: false,
+            showToast: false,
+            toastMessage: '',
+            toastType: 'success',
+            errors: { productName: '', ingredients: '', substituteFor: '' },
+
+            originalIngredient: '',
+            targetSubstance: null,
+            recommendations: [],
+            storedJson: '',
+            requestHashNumber: '',
+
+            showError(message) { this.toastMessage = message; this.toastType = 'error'; this.showToast = true; setTimeout(() => this.showToast = false, 4000); },
         showSuccess(message) { this.toastMessage = message; this.toastType = 'success'; this.showToast = true; setTimeout(() => this.showToast = false, 4000); },
         cleanLabel(value) { return (value || '').replace(/^-\s*/, '').trim(); },
 
@@ -46,7 +48,7 @@ document.addEventListener('alpine:init', () => {
             }
             return tempUserId;
         },
-        
+
         validateForm() {
             this.errors = { productName: '', ingredients: '', substituteFor: '' };
             if (!this.productName.trim()) { this.errors.productName = 'Product name required'; return false; }
@@ -104,213 +106,331 @@ document.addEventListener('alpine:init', () => {
         }
     }));
 });
-</script>
+    </script>
 
-<div x-show="showToast" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-2" class="fixed top-4 right-4 z-50" role="alert" aria-live="polite">
-    <div :class="toastType === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-primary/10 border-primary text-primary'" class="px-4 py-3 rounded-lg border shadow-lg flex items-center gap-3">
-        <template x-if="toastType === 'success'">
-            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-        </template>
-        <template x-if="toastType === 'error'">
-            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-        </template>
-        <span x-text="toastMessage" class="font-medium"></span>
-    </div>
-</div>
-
-<header class="sticky top-0 z-40 frosted-glass-header">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-20">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-md">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold text-primary">FormuHalal</h1>
-                    <p class="text-xs text-gray-500">Halal Formulation & Sourcing Engine</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-6">
-                <nav class="hidden md:flex items-center gap-6">
-                    <a href="/" class="text-sm font-medium text-gray-700 hover:text-primary transition-colors">Home</a>
-                    <a href="/about" class="text-sm font-medium text-gray-700 hover:text-primary transition-colors">About</a>
-                </nav>
-                <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 frosted-glass text-gold text-sm font-medium rounded-full border border-gold/20">Halal Certified</span>
-            </div>
+    <div x-show="showToast" x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 translate-y-2" class="fixed top-4 right-4 z-50" role="alert"
+        aria-live="polite">
+        <div :class="toastType === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'"
+            class="px-4 py-3 rounded-lg border shadow-lg flex items-center gap-3">
+            <template x-if="toastType === 'success'">
+                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </template>
+            <template x-if="toastType === 'error'">
+                <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </template>
+            <span x-text="toastMessage" class="font-medium"></span>
         </div>
     </div>
-</header>
 
-<main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="grid lg:grid-cols-5 gap-8">
-        <div class="lg:col-span-2">
-            <div class="frosted-glass-strong rounded-xl p-6">
-                <div class="flex items-center gap-2 mb-6">
-                    <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+    <header class="sticky top-0 z-40 frosted-glass-header">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-md">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
                     </div>
-                    <h2 class="text-lg font-semibold text-gray-800">Formulation Input</h2>
+                    <div>
+                        <h1 class="text-xl font-bold text-primary">FormuHalal</h1>
+                        <p class="text-xs text-gray-500">Halal Formulation & Sourcing Engine</p>
+                    </div>
                 </div>
-                <form @submit.prevent="submitForm()" class="space-y-5">
-                    <div>
-                        <label for="productName" class="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
-                        <input type="text" id="productName" x-model="productName" placeholder="e.g., Gummy Vitamins" :class="errors.productName ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300 focus:border-primary focus:ring-primary/20'" class="w-full px-4 py-3 rounded-lg border bg-white/90 focus:outline-none focus:ring-2 transition-all duration-200" aria-label="Product Name" />
-                        <p x-show="errors.productName" class="mt-1 text-sm text-red-600" x-text="errors.productName"></p>
-                    </div>
-                    <div>
-                        <label for="ingredients" class="block text-sm font-medium text-gray-700 mb-2">Full Ingredients List</label>
-                        <textarea id="ingredients" x-model="ingredients" rows="5" placeholder="Enter all ingredients, separated by commas..." :class="errors.ingredients ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300 focus:border-primary focus:ring-primary/20'" class="w-full px-4 py-3 rounded-lg border bg-white/90 focus:outline-none focus:ring-2 transition-all duration-200 resize-none" aria-label="Full Ingredients List"></textarea>
-                        <p x-show="errors.ingredients" class="mt-1 text-sm text-red-600" x-text="errors.ingredients"></p>
-                    </div>
-                    <div>
-                        <label for="substituteFor" class="block text-sm font-medium text-gray-700 mb-2">Ingredient to Substitute</label>
-                        <input type="text" id="substituteFor" x-model="substituteFor" placeholder="e.g., Porcine Gelatin" :class="errors.substituteFor ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300 focus:border-primary focus:ring-primary/20'" class="w-full px-4 py-3 rounded-lg border bg-white/90 focus:outline-none focus:ring-2 transition-all duration-200" aria-label="Ingredient to Substitute" />
-                        <p x-show="errors.substituteFor" class="mt-1 text-sm text-red-600" x-text="errors.substituteFor"></p>
-                    </div>
-                    <button type="submit" :disabled="isLoading" class="w-full py-3.5 px-6 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-md flex items-center justify-center gap-2">
-                        <template x-if="!isLoading"><span class="flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>Find Halal Substitute</span></template>
-                        <template x-if="isLoading"><span class="flex items-center gap-2"><svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Analyzing Formulation...</span></template>
-                    </button>
-                </form>
+                <div class="flex items-center gap-6">
+                    <nav class="hidden md:flex items-center gap-6">
+                        <a href="/"
+                            class="text-sm font-medium text-gray-700 hover:text-primary transition-colors">Home</a>
+                        <a href="/about"
+                            class="text-sm font-medium text-gray-700 hover:text-primary transition-colors">About</a>
+                    </nav>
+                    <span
+                        class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 frosted-glass text-gold text-sm font-medium rounded-full border border-gold/20">Halal
+                        Certified</span>
+                </div>
             </div>
         </div>
+    </header>
 
-        <div class="lg:col-span-3 space-y-6">
-            <div x-show="!hasResults && !isLoading" class="frosted-glass rounded-xl p-12 text-center">
-                <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">Ready to Analyze</h3>
-                <p class="text-gray-500 max-w-sm mx-auto">Enter your product formulation details and we'll find halal-certified substitutes with verified Malaysian suppliers.</p>
-            </div>
-
-            <div x-show="isLoading" x-cloak class="space-y-6 animate-pulse">
-                <div class="frosted-glass rounded-xl overflow-hidden">
-                    <div class="bg-gradient-to-r from-primary to-primary-dark px-6 py-4">
-                        <div class="h-6 bg-white/40 rounded w-48 mb-4"></div>
-                    </div>
-                    <div class="p-6">
-                        <div class="grid sm:grid-cols-3 gap-4 mb-6">
-                            <div class="frosted-glass rounded-lg p-4 border border-red-100"><div class="h-3 bg-gray-200 rounded w-16 mb-1"></div><div class="h-4 bg-gray-200 rounded w-24"></div></div>
-                            <div class="flex items-center justify-center"><div class="w-10 h-10 rounded-full bg-gray-200"></div></div>
-                            <div class="frosted-glass rounded-lg p-4 border border-primary/30"><div class="h-3 bg-gray-200 rounded w-16 mb-1"></div><div class="h-4 bg-gray-200 rounded w-32"></div></div>
+    <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid lg:grid-cols-5 gap-8">
+            <div class="lg:col-span-2">
+                <div class="frosted-glass-strong rounded-xl p-6">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
                         </div>
-                        <div class="flex flex-wrap items-center gap-4 mb-4">
-                            <div class="h-7 bg-gray-200 rounded-full w-24"></div>
-                            <div class="h-7 bg-gray-200 rounded-full w-28"></div>
-                        </div>
-                        <div class="frosted-glass rounded-lg p-4"><div class="h-4 bg-gray-200 rounded w-32 mb-2"></div><div class="h-4 bg-gray-200 rounded w-full mb-1.5"></div><div class="h-4 bg-gray-200 rounded w-5/6 mb-1.5"></div><div class="h-4 bg-gray-200 rounded w-4/5"></div></div>
+                        <h2 class="text-lg font-semibold text-gray-800">Formulation Input</h2>
                     </div>
-                </div>
-                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <template x-for="i in 3" :key="i">
-                        <div class="frosted-glass rounded-xl p-5">
-                            <div class="flex items-start justify-between mb-3">
-                                <div><div class="h-5 bg-gray-200 rounded w-32 mb-1"></div><div class="h-4 bg-gray-200 rounded w-24 mb-2"></div></div><div class="h-5 bg-gray-200 rounded-full w-12"></div>
+                    <form @submit.prevent="submitForm()" class="space-y-5">
+                        <div>
+                            <label for="productName" class="block text-sm font-medium text-gray-700 mb-2">Product
+                                Name</label>
+                            <input type="text" id="productName" x-model="productName" placeholder="e.g., Gummy Vitamins"
+                                :class="errors.productName ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300 focus:border-primary focus:ring-primary/20'"
+                                class="w-full px-4 py-3 rounded-lg border bg-white/90 focus:outline-none focus:ring-2 transition-all duration-200"
+                                aria-label="Product Name" />
+                            <p x-show="errors.productName" class="mt-1 text-sm text-red-600"
+                                x-text="errors.productName"></p>
+                        </div>
+                        <div>
+                            <label for="ingredients" class="block text-sm font-medium text-gray-700 mb-2">Full
+                                Ingredients List</label>
+                            <textarea id="ingredients" x-model="ingredients" rows="5"
+                                placeholder="Enter all ingredients, separated by commas..."
+                                :class="errors.ingredients ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300 focus:border-primary focus:ring-primary/20'"
+                                class="w-full px-4 py-3 rounded-lg border bg-white/90 focus:outline-none focus:ring-2 transition-all duration-200 resize-none"
+                                aria-label="Full Ingredients List"></textarea>
+                            <p x-show="errors.ingredients" class="mt-1 text-sm text-red-600"
+                                x-text="errors.ingredients"></p>
+                        </div>
+                        <div x-show="ingredients.trim().length > 0" x-transition
+                            class="p-5 rounded-xl border-2 border-gray-300 bg-gray-50/50 shadow-inner">
+                            <label class="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                                <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                                </svg>
+                                Select the Ingredient to Substitute
+                            </label>
+                            <div class="flex flex-wrap gap-2">
+                                <template
+                                    x-for="ing in ingredients.split(',').map(i => i.trim()).filter(i => i.length > 0)"
+                                    :key="ing">
+                                    <button type="button" @click="substituteFor = ing"
+                                        :class="substituteFor === ing ? 'bg-white text-primary border-primary border-2 ring-2 ring-primary/30 shadow-md transform scale-105' : 'bg-white text-gray-600 border-gray-300 border-2 hover:border-gray-400 hover:bg-gray-50 shadow-sm'"
+                                        class="px-4 pt-2 pb-3 rounded-lg text-sm font-semibold capitalize transition-all duration-200 focus:outline-none"
+                                        x-text="ing">
+                                    </button>
+                                </template>
                             </div>
-                            <div class="flex flex-wrap gap-1.5 mb-3"><div class="h-5 bg-gray-200 rounded-full w-16"></div><div class="h-5 bg-gray-200 rounded-full w-14"></div></div>
-                            <div class="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-200">
-                                <div class="h-3 bg-gray-200 rounded w-20"></div>
-                                <div class="h-3 bg-gray-200 rounded w-16"></div>
+                            <p x-show="errors.substituteFor"
+                                class="mt-3 text-sm text-red-600 font-medium flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span x-text="errors.substituteFor"></span>
+                            </p>
+                        </div>
+                        <div x-show="ingredients.trim().length === 0">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Ingredient to Substitute</label>
+                            <div
+                                class="p-4 rounded-lg border border-dashed border-gray-300 bg-gray-50/50 text-center text-sm text-gray-500">
+                                Type your ingredients above first.
+                            </div>
+                            <p x-show="errors.substituteFor" class="mt-2 text-sm text-red-600"
+                                x-text="errors.substituteFor"></p>
+                        </div>
+                        <button type="submit" :disabled="isLoading"
+                            class="w-full py-3.5 px-6 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-md flex items-center justify-center gap-2">
+                            <template x-if="!isLoading"><span class="flex items-center gap-2"><svg class="w-5 h-5"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>Find Halal Substitute</span></template>
+                            <template x-if="isLoading"><span class="flex items-center gap-2"><svg
+                                        class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                            stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                        </path>
+                                    </svg>Analyzing Formulation...</span></template>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3 space-y-6">
+                <div x-show="!hasResults && !isLoading" class="frosted-glass rounded-xl p-12 text-center">
+                    <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Ready to Analyze</h3>
+                    <p class="text-gray-500 max-w-sm mx-auto">Enter your product formulation details and we'll find
+                        halal-certified substitutes with verified Malaysian suppliers.</p>
+                </div>
+
+                <div x-show="isLoading" x-cloak class="space-y-6 animate-pulse">
+                    <div class="frosted-glass rounded-xl overflow-hidden">
+                        <div class="bg-gradient-to-r from-primary to-primary-dark px-6 py-4">
+                            <div class="h-6 bg-white/40 rounded w-48 mb-4"></div>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid sm:grid-cols-3 gap-4 mb-6">
+                                <div class="frosted-glass rounded-lg p-4 border border-red-100">
+                                    <div class="h-3 bg-gray-200 rounded w-16 mb-1"></div>
+                                    <div class="h-4 bg-gray-200 rounded w-24"></div>
+                                </div>
+                                <div class="flex items-center justify-center">
+                                    <div class="w-10 h-10 rounded-full bg-gray-200"></div>
+                                </div>
+                                <div class="frosted-glass rounded-lg p-4 border border-primary/30">
+                                    <div class="h-3 bg-gray-200 rounded w-16 mb-1"></div>
+                                    <div class="h-4 bg-gray-200 rounded w-32"></div>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-4 mb-4">
+                                <div class="h-7 bg-gray-200 rounded-full w-24"></div>
+                                <div class="h-7 bg-gray-200 rounded-full w-28"></div>
+                            </div>
+                            <div class="frosted-glass rounded-lg p-4">
+                                <div class="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                                <div class="h-4 bg-gray-200 rounded w-full mb-1.5"></div>
+                                <div class="h-4 bg-gray-200 rounded w-5/6 mb-1.5"></div>
+                                <div class="h-4 bg-gray-200 rounded w-4/5"></div>
                             </div>
                         </div>
-                    </template>
-                </div>
-            </div>
-
-            <div x-show="hasResults" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" class="space-y-6">
-                <div class="overflow-hidden rounded-xl frosted-glass-strong">
-                    <div class="bg-gradient-to-r from-primary to-primary-dark px-6 py-4">
-                        <h3 class="text-lg font-semibold text-white flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            Halal Substitutes &amp; Suppliers
-                        </h3>
-                        <p class="panel-header-subtitle">Replacing <span class="font-semibold" x-text="cleanLabel(originalIngredient)"></span> in your formulation</p>
                     </div>
-                    <div class="p-6">
-                        <div x-show="!recommendations.length" class="frosted-glass rounded-lg p-4 mb-4 text-sm text-gray-600">
-                            No enriched recommendations were returned yet. Check that substitute and supplier LLM steps completed successfully.
-                        </div>
-                        <div class="space-y-4">
-                            <template x-for="(item, index) in recommendations" :key="item.substance + '-' + index">
-                                <article class="rounded-xl frosted-glass border border-primary/10 overflow-hidden">
-                                    <div class="px-6 py-4 border-b border-white/40 bg-white/40">
-                                        <p class="text-xs font-medium text-gray-500 mb-1.5">Recommended substitute</p>
-                                        <h4 class="text-lg font-semibold text-primary" x-text="cleanLabel(item.substance)"></h4>
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <template x-for="i in 3" :key="i">
+                            <div class="frosted-glass rounded-xl p-5">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div>
+                                        <div class="h-5 bg-gray-200 rounded w-32 mb-1"></div>
+                                        <div class="h-4 bg-gray-200 rounded w-24 mb-2"></div>
                                     </div>
-                                    <div class="p-5 space-y-5">
-                                        <div>
-                                            <p class="text-sm font-semibold text-gray-800 mb-2">Why this substitute</p>
-                                            <p class="text-sm text-gray-600 leading-relaxed" x-text="item.explanation || 'No explanation available.'"></p>
-                                        </div>
-                                        <div class="rounded-lg border border-gold/20 bg-white/90 p-5">
-                                            <div class="flex flex-wrap items-center justify-between gap-3 pb-4">
-                                                <p class="text-sm font-semibold text-gray-800">Verified supplier</p>
-                                                <span
-                                                    class="supplier-match-badge"
-                                                    :class="item.supplier?.matched_in_database ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-gold/10 text-gold-dark border border-gold/30'"
-                                                    x-text="item.supplier?.matched_in_database ? 'JAKIM directory match' : 'Name not found in directory'"
-                                                ></span>
-                                            </div>
-                                            <p class="text-base font-semibold text-gray-800 pb-1" x-text="item.supplier?.name || 'Supplier unavailable'"></p>
-                                            <div class="pb-2">
-                                                <p class="text-sm text-gray-600 pb-2" x-show="item.supplier?.location">
-                                                    <span class="font-medium text-gray-700">Location:</span>
-                                                    <span x-text="item.supplier.location"></span>
-                                                </p>
-                                                <p class="text-sm text-gray-600" x-show="item.supplier?.certifications">
-                                                    <span class="font-medium text-gray-700">Certification:</span>
-                                                    <span x-text="item.supplier.certifications"></span>
-                                                </p>
-                                            </div>
-                                            <p class="supplier-notes" x-show="item.supplier_reason" x-text="item.supplier_reason"></p>
-                                            <a
-                                                x-show="item.supplier?.source_url"
-                                                :href="item.supplier.source_url"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                class="inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-primary hover:text-primary-dark transition-colors"
-                                            >
-                                                View JAKIM listing
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </article>
-                            </template>
-                        </div>
+                                    <div class="h-5 bg-gray-200 rounded-full w-12"></div>
+                                </div>
+                                <div class="flex flex-wrap gap-1.5 mb-3">
+                                    <div class="h-5 bg-gray-200 rounded-full w-16"></div>
+                                    <div class="h-5 bg-gray-200 rounded-full w-14"></div>
+                                </div>
+                                <div
+                                    class="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-200">
+                                    <div class="h-3 bg-gray-200 rounded w-20"></div>
+                                    <div class="h-3 bg-gray-200 rounded w-16"></div>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
 
-                <div x-show="targetSubstance && targetSubstance.substance" class="frosted-glass rounded-xl p-5">
-                    <h3 class="text-sm font-semibold text-gray-800 mb-2">Database match</h3>
-                    <p class="text-sm text-gray-600">
-                        Matched <span class="font-medium text-gray-800" x-text="targetSubstance?.substance"></span>
-                        <span x-show="targetSubstance?.used_for?.length">
-                            with <span x-text="targetSubstance?.used_for?.length"></span> functional roles in the FDA reference data.
-                        </span>
-                    </p>
-                </div>
+                <div x-show="hasResults" x-cloak x-transition:enter="transition ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-4"
+                    x-transition:enter-end="opacity-100 translate-y-0" class="space-y-6">
+                    <div class="overflow-hidden rounded-xl frosted-glass-strong">
+                        <div class="bg-gradient-to-r from-primary to-primary-dark px-6 py-4">
+                            <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Halal Substitutes &amp; Suppliers
+                            </h3>
+                            <p class="panel-header-subtitle">Replacing <span class="font-semibold"
+                                    x-text="cleanLabel(originalIngredient)"></span> in your formulation</p>
+                        </div>
+                        <div class="p-6">
+                            <div x-show="!recommendations.length"
+                                class="frosted-glass rounded-lg p-4 mb-4 text-sm text-gray-600">
+                                No enriched recommendations were returned yet. Check that substitute and supplier LLM
+                                steps completed successfully.
+                            </div>
+                            <div class="space-y-4">
+                                <template x-for="(item, index) in recommendations" :key="item.substance + '-' + index">
+                                    <article class="rounded-xl frosted-glass border border-primary/10 overflow-hidden">
+                                        <div class="px-6 py-4 border-b border-white/40 bg-white/40">
+                                            <p class="text-xs font-medium text-gray-500 mb-1.5">Recommended substitute
+                                            </p>
+                                            <h4 class="text-lg font-semibold text-primary"
+                                                x-text="cleanLabel(item.substance)"></h4>
+                                        </div>
+                                        <div class="p-5 space-y-5">
+                                            <div>
+                                                <p class="text-sm font-semibold text-gray-800 mb-2">Why this substitute
+                                                </p>
+                                                <p class="text-sm text-gray-600 leading-relaxed"
+                                                    x-text="item.explanation || 'No explanation available.'"></p>
+                                            </div>
+                                            <div class="rounded-lg border border-gold/20 bg-white/90 p-5">
+                                                <div class="flex flex-wrap items-center justify-between gap-3 pb-4">
+                                                    <p class="text-sm font-semibold text-gray-800">Verified supplier</p>
+                                                    <span class="supplier-match-badge"
+                                                        :class="item.supplier?.matched_in_database ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-gold/10 text-gold-dark border border-gold/30'"
+                                                        x-text="item.supplier?.matched_in_database ? 'JAKIM directory match' : 'Name not found in directory'"></span>
+                                                </div>
+                                                <p class="text-base font-semibold text-gray-800 pb-1"
+                                                    x-text="item.supplier?.name || 'Supplier unavailable'"></p>
+                                                <div class="pb-2">
+                                                    <p class="text-sm text-gray-600 pb-2"
+                                                        x-show="item.supplier?.location">
+                                                        <span class="font-medium text-gray-700">Location:</span>
+                                                        <span x-text="item.supplier.location"></span>
+                                                    </p>
+                                                    <p class="text-sm text-gray-600"
+                                                        x-show="item.supplier?.certifications">
+                                                        <span class="font-medium text-gray-700">Certification:</span>
+                                                        <span x-text="item.supplier.certifications"></span>
+                                                    </p>
+                                                </div>
+                                                <p class="supplier-notes" x-show="item.supplier_reason"
+                                                    x-text="item.supplier_reason"></p>
+                                                <a x-show="item.supplier?.source_url" :href="item.supplier.source_url"
+                                                    target="_blank" rel="noopener noreferrer"
+                                                    class="inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-primary hover:text-primary-dark transition-colors">
+                                                    View JAKIM listing
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                    </svg>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </article>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
 
-                <div x-show="storedJson" class="frosted-glass rounded-lg p-4 text-xs text-gray-500">
-                    Saved JSON: <span class="font-medium text-gray-700" x-text="storedJson"></span>
+                    <div x-show="targetSubstance && targetSubstance.substance" class="frosted-glass rounded-xl p-5">
+                        <h3 class="text-sm font-semibold text-gray-800 mb-2">Database match</h3>
+                        <p class="text-sm text-gray-600">
+                            Matched <span class="font-medium text-gray-800" x-text="targetSubstance?.substance"></span>
+                            <span x-show="targetSubstance?.used_for?.length">
+                                with <span x-text="targetSubstance?.used_for?.length"></span> functional roles in the
+                                FDA reference data.
+                            </span>
+                        </p>
+                    </div>
+
+                    <div x-show="storedJson" class="frosted-glass rounded-lg p-4 text-xs text-gray-500">
+                        Saved JSON: <span class="font-medium text-gray-700" x-text="storedJson"></span>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</main>
+    </main>
 
-<footer class="mt-0 border-t border-gray-200 frosted-glass">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <span class="text-sm text-gray-500">FormuHalal © 2026. No rights reserved.</span>
-            <div class="flex items-center gap-4 text-sm">
-                <a href="/about" class="text-gray-500 hover:text-primary transition-colors">About</a>
-                <a href="/terms" class="text-gray-500 hover:text-primary transition-colors">Terms</a>
-                <a href="/privacy" class="text-gray-500 hover:text-primary transition-colors">Privacy</a>
+    <footer class="mt-0 border-t border-gray-200 frosted-glass">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <span class="text-sm text-gray-500">FormuHalal © 2026. No rights reserved.</span>
+                <div class="flex items-center gap-4 text-sm">
+                    <a href="/about" class="text-gray-500 hover:text-primary transition-colors">About</a>
+                    <a href="/terms" class="text-gray-500 hover:text-primary transition-colors">Terms</a>
+                    <a href="/privacy" class="text-gray-500 hover:text-primary transition-colors">Privacy</a>
+                </div>
             </div>
         </div>
-    </div>
-</footer>
+    </footer>
 </body>
+
 </html>
