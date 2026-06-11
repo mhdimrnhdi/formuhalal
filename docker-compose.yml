@@ -11,6 +11,8 @@ services:
     init: true
     environment:
       DATA_DIR: /data
+      APP_UID: ${UID:-1000}
+      APP_GID: ${GID:-1000}
       ETL_CRON: ${ETL_CRON:-0 2 * * 0}
       RUN_ON_START: ${ETL_RUN_ON_START:-true}
       SUPPLIER_CRAWL_URL: ${SUPPLIER_CRAWL_URL:-}
@@ -21,9 +23,12 @@ services:
   backend:
     build:
       context: ./backend
+    user: "${UID:-1000}:${GID:-1000}"
     ports:
       - "8001:8001"
     environment:
+      HOME: /tmp
+      UV_CACHE_DIR: /tmp/.cache/uv
       FRONTEND_URL: http://frontend:8000
       DB_URL: /data/database.sqlite
       FORMULATION_RESULTS_DIR: /data/formulation_results
@@ -37,7 +42,7 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
       GEMINI_TIMEOUT: ${GEMINI_TIMEOUT:-120}
-      SUPPLIER_LIMIT: ${SUPPLIER_LIMIT:-150}
+      SUPPLIER_MATCH_THRESHOLD: ${SUPPLIER_MATCH_THRESHOLD:-0.72}
     volumes:
       - ./data:/data
     depends_on:

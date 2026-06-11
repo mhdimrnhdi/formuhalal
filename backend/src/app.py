@@ -5,6 +5,7 @@ import re
 import sqlite3
 import urllib.error
 from datetime import datetime, UTC
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +17,6 @@ from .llm import (
     generate_substitutes,
     generate_suppliers,
     parse_substitute_entries,
-    parse_substitute_substances,
     parse_supplier_entries,
     save_substitutes_text,
 )
@@ -181,63 +181,67 @@ def _clean_formulation_result(value: Any) -> Any:
     return value
 
 
-SUPPLIER_KEYWORDS = (
-    "INGREDIENT",
-    "CHEMICAL",
-    "ADDITIVE",
-    "FOOD SUPPLY",
-    "FOODSTUFF",
-    "FOOD SUPPLIES",
-    "GELLING",
-    "THICKEN",
+SUPPLIER_MATCH_THRESHOLD = float(os.getenv("SUPPLIER_MATCH_THRESHOLD", "0.72"))
+
+COMPANY_SUFFIX_RE = re.compile(
+    r"\b(SDN\.?\s*BHD\.?|BHD\.?|ENTERPRISE|PLT|BERHAD|\(M\)|\(MALAYSIA\)|\(FORMERLY[^)]+\))\b",
+    re.IGNORECASE,
 )
 
 
-def _find_supplier_candidates(
-    connection: sqlite3.Connection,
-    substances: list[str],
-    *,
-    limit: int = 150,
-) -> list[dict]:
-    keywords = list(SUPPLIER_KEYWORDS)
-    for substance in substances:
-        keywords.extend(part for part in re.split(r"[\s(,]+", substance) if len(part) >= 4)
-
-    candidates: list[dict] = []
-    seen_names: set[str] = set()
-
-    rows = connection.execute(
-        """
-        SELECT company_id, name, location, certifications
-        FROM suppliers
-        ORDER BY name
-        """
-    ).fetchall()
-
-    for row in rows:
-        name = row["name"]
-        if name in seen_names:
-            continue
-
-        seen_names.add(name)
-        candidates.append(
-            {
-                "company_id": row["company_id"],
-                "name": name,
-                "location": row["location"],
-                "certifications": row["certifications"],
-            }
-        )
-        if len(candidates) >= limit:
-            break
-
-    return candidates
+def _normalize_company_name(name: str) -> str:
+    normalized = _normalize(name)
+    normalized = COMPANY_SUFFIX_RE.sub("", normalized)
+    normalized = re.sub(r"[^\w\s]", " ", normalized)
+    return re.sub(r"\s+", " ", normalized).strip()
 
 
-def _lookup_supplier_by_name(connection: sqlite3.Connection, company_name: str) -> dict | None:
+def _supplier_row_to_record(row: sqlite3.Row) -> dict:
+    return {
+        "company_id": row["company_id"],
+        "name": row["name"],
+        "location": row["location"],
+        "certifications": row["certifications"],
+        "source_url": row["source_url"],
+    }
+
+
+def _score_company_name_match(query_name: str, candidate_name: str) -> tuple[float, str]:
+    normalized_query = _normalize_company_name(query_name)
+    normalized_candidate = _normalize_company_name(candidate_name)
+    if not normalized_query or not normalized_candidate:
+        return 0.0, "none"
+
+    if _normalize(query_name) == _normalize(candidate_name):
+        return 1.0, "exact"
+
+    if normalized_query == normalized_candidate:
+        return 0.98, "normalized"
+
+    if normalized_query in normalized_candidate or normalized_candidate in normalized_query:
+        shorter = min(len(normalized_query), len(normalized_candidate))
+        longer = max(len(normalized_query), len(normalized_candidate))
+        if shorter / longer >= 0.6:
+            return 0.9, "contains"
+
+    ratio = SequenceMatcher(None, normalized_query, normalized_candidate).ratio()
+    query_tokens = set(normalized_query.split())
+    candidate_tokens = set(normalized_candidate.split())
+    if query_tokens and candidate_tokens:
+        overlap = len(query_tokens & candidate_tokens) / len(query_tokens | candidate_tokens)
+        ratio = max(ratio, overlap)
+
+    if ratio >= 0.95:
+        return ratio, "fuzzy_high"
+    if ratio >= SUPPLIER_MATCH_THRESHOLD:
+        return ratio, "fuzzy"
+    return ratio, "none"
+
+
+def _find_similar_supplier_in_db(connection: sqlite3.Connection, company_name: str) -> tuple[dict | None, float, str]:
     normalized_name = _normalize(company_name)
     if not normalized_name:
-        return None
+        return None, 0.0, "none"
 
     row = connection.execute(
         """
@@ -249,15 +253,8 @@ def _lookup_supplier_by_name(connection: sqlite3.Connection, company_name: str) 
         """,
         (company_name,),
     ).fetchone()
-
     if row:
-        return {
-            "company_id": row["company_id"],
-            "name": row["name"],
-            "location": row["location"],
-            "certifications": row["certifications"],
-            "source_url": row["source_url"],
-        }
+        return _supplier_row_to_record(row), 1.0, "exact"
 
     rows = connection.execute(
         """
@@ -266,17 +263,22 @@ def _lookup_supplier_by_name(connection: sqlite3.Connection, company_name: str) 
         ORDER BY name
         """
     ).fetchall()
-    for candidate in rows:
-        if _normalize(candidate["name"]) == normalized_name:
-            return {
-                "company_id": candidate["company_id"],
-                "name": candidate["name"],
-                "location": candidate["location"],
-                "certifications": candidate["certifications"],
-                "source_url": candidate["source_url"],
-            }
 
-    return None
+    best_record: dict | None = None
+    best_score = 0.0
+    best_match_type = "none"
+
+    for candidate in rows:
+        score, match_type = _score_company_name_match(company_name, candidate["name"])
+        if score > best_score:
+            best_score = score
+            best_match_type = match_type
+            best_record = _supplier_row_to_record(candidate)
+
+    if best_record and best_score >= SUPPLIER_MATCH_THRESHOLD:
+        return best_record, best_score, best_match_type
+
+    return None, best_score, "none"
 
 
 def _build_recommendations(
@@ -297,27 +299,28 @@ def _build_recommendations(
             continue
 
         explanation = substitute_entry["explanation"]
+        llm_company_name = supplier_entry["company_name"]
+        supplier_record, match_score, match_type = _find_similar_supplier_in_db(connection, llm_company_name)
+        matched_in_database = supplier_record is not None
 
-        company_name = supplier_entry["company_name"]
-        supplier_record = _lookup_supplier_by_name(connection, company_name)
-
-        # STRICT VERIFICATION: drop if not matched in DB
-        if not supplier_record:
-            continue
+        supplier_payload = {
+            "name": supplier_record["name"] if supplier_record else llm_company_name,
+            "llm_company_name": llm_company_name,
+            "location": supplier_record["location"] if supplier_record else "",
+            "certifications": supplier_record["certifications"] if supplier_record else "",
+            "source_url": supplier_record["source_url"] if supplier_record else "",
+            "matched_in_database": matched_in_database,
+            "match_score": round(match_score, 3),
+            "match_type": match_type,
+            "company_id": supplier_record["company_id"] if supplier_record else "",
+        }
 
         recommendations.append(
             {
                 "substance": substance,
                 "explanation": explanation,
                 "supplier_reason": supplier_entry["reason"],
-                "supplier": {
-                    "name": company_name,
-                    "location": supplier_record["location"],
-                    "certifications": supplier_record["certifications"],
-                    "source_url": supplier_record["source_url"],
-                    "matched_in_database": True,
-                    "company_id": supplier_record["company_id"],
-                },
+                "supplier": supplier_payload,
             }
         )
 
@@ -464,15 +467,9 @@ def formulation():
             }
         else:
             try:
-                with _connect_db() as connection:
-                    substances = parse_substitute_substances(substitutes_for_suppliers)
-                    limit = int(os.getenv("SUPPLIER_LIMIT", "150"))
-                    supplier_candidates = _find_supplier_candidates(connection, substances, limit=limit)
-
                 suppliers_text, model_name = generate_suppliers(
                     prepared_payload,
                     substitutes_for_suppliers,
-                    supplier_candidates,
                 )
                 save_substitutes_text(suppliers_text, supplier_txt_path)
                 prepared_payload["llm_suppliers"] = {

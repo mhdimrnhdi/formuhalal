@@ -360,13 +360,17 @@
                                             </div>
                                             <div class="rounded-lg border border-gold/20 bg-white/90 p-5">
                                                 <div class="flex flex-wrap items-center justify-between gap-3 pb-4">
-                                                    <p class="text-sm font-semibold text-gray-800">Verified supplier</p>
+                                                    <p class="text-sm font-semibold text-gray-800">Suggested supplier</p>
                                                     <span class="supplier-match-badge"
                                                         :class="item.supplier?.matched_in_database ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-gold/10 text-gold-dark border border-gold/30'"
-                                                        x-text="item.supplier?.matched_in_database ? 'JAKIM directory match' : 'Name not found in directory'"></span>
+                                                        x-text="item.supplier?.matched_in_database ? 'JAKIM directory match' : 'Online suggestion — verify with supplier'"></span>
                                                 </div>
                                                 <p class="text-base font-semibold text-gray-800 pb-1"
                                                     x-text="item.supplier?.name || 'Supplier unavailable'"></p>
+                                                <p class="text-xs text-gray-500 pb-2"
+                                                    x-show="item.supplier?.matched_in_database && item.supplier?.llm_company_name && item.supplier.llm_company_name !== item.supplier.name">
+                                                    LLM suggested: <span x-text="item.supplier.llm_company_name"></span>
+                                                </p>
                                                 <div class="pb-2">
                                                     <p class="text-sm text-gray-600 pb-2"
                                                         x-show="item.supplier?.location">

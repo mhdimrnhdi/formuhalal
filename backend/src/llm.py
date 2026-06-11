@@ -202,19 +202,8 @@ def build_supplier_prompt(
     prepared_payload: dict,
     substitutes_text: str,
     substances: list[str],
-    suppliers: list[dict],
 ) -> str:
     inp = prepared_payload["input"]
-    supplier_lines = []
-    for index, supplier in enumerate(suppliers, start=1):
-        location = supplier.get("location", "").strip()
-        location_hint = location.split()[-2:] if location else []
-        location_label = " ".join(location_hint) if location_hint else "Malaysia"
-        supplier_lines.append(
-            f"{index}. {supplier['name']} | {location_label} | {supplier.get('certifications', 'JAKIM Halal Directory')}"
-        )
-
-    suppliers_block = "\n".join(supplier_lines)
     substance_list = ", ".join(substances) if substances else "the substitutes below"
 
     return f"""You are a Halal ingredient sourcing advisor for Malaysian SME food manufacturers.
@@ -223,13 +212,15 @@ PRODUCT: {inp["product_name"]}
 SUBSTITUTES TO SOURCE:
 {substitutes_text.strip()}
 
-JAKIM HALAL DIRECTORY SUPPLIERS (pick ONLY from this list):
-{suppliers_block}
+Use your knowledge and search the web to find real Malaysian companies that sell or distribute these food ingredients for B2B use.
+Prioritize companies listed in the JAKIM My e-Halal directory (https://myehalal.halal.gov.my) or known Halal-certified ingredient distributors in Malaysia.
+Prefer food ingredient, additive, chemical, or food supply companies — not restaurants, schools, or retail shops.
 
-For each substitute ({substance_list}), recommend ONE supplier from the list above that is most likely to sell that substance. The same supplier may supply multiple substances.
+For each substitute ({substance_list}), recommend ONE Malaysian supplier most likely to sell that substance.
+Return the official registered company name as precisely as possible (include SDN BHD / BHD if known).
 
 Format: numbered list matching the substitutes, one line each:
-1. SUBSTANCE NAME - SUPPLIER NAME (State) - one short reason
+1. SUBSTANCE NAME - COMPANY NAME - one short reason
 No intro or outro."""
 
 
@@ -274,17 +265,20 @@ def _call_openai(prompt: str) -> str:
     return text
 
 
-def _call_gemini(prompt: str) -> str:
+def _call_gemini(prompt: str, *, use_google_search: bool = False) -> str:
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY is not set")
 
-    payload = {
+    payload: dict = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.2,
             "maxOutputTokens": 600,
         },
     }
+    if use_google_search:
+        payload["tools"] = [{"google_search": {}}]
+
     url = f"{GEMINI_URL.rstrip('/')}/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
     req = urllib.request.Request(
         url,
@@ -296,6 +290,9 @@ def _call_gemini(prompt: str) -> str:
         with urllib.request.urlopen(req, timeout=GEMINI_TIMEOUT) as resp:
             out = json.load(resp)
     except urllib.error.HTTPError as error:
+        if use_google_search:
+            return _call_gemini(prompt, use_google_search=False)
+
         message = error.reason
         try:
             body = json.load(error)
@@ -318,15 +315,12 @@ def _call_gemini(prompt: str) -> str:
 def generate_suppliers(
     prepared_payload: dict,
     substitutes_text: str,
-    suppliers: list[dict],
 ) -> tuple[str, str]:
     substances = parse_substitute_substances(substitutes_text)
     if not substances:
         raise RuntimeError("No substitute substances found in substitutes text")
-    if not suppliers:
-        raise RuntimeError("No supplier candidates available from database")
 
-    prompt = build_supplier_prompt(prepared_payload, substitutes_text, substances, suppliers)
+    prompt = build_supplier_prompt(prepared_payload, substitutes_text, substances)
     if GEMINI_API_KEY:
-        return _call_gemini(prompt), GEMINI_MODEL
+        return _call_gemini(prompt, use_google_search=True), GEMINI_MODEL
     return _call_openai(prompt), OPENAI_MODEL
