@@ -77,8 +77,11 @@ def build_substitute_prompt(prepared_payload: dict, cap: int) -> str:
     return f"""You are a food formulation scientist helping a Halal SME manufacturer.
 
 PRODUCT: {inp["product_name"]}
+FULL INGREDIENTS LIST: {inp["full_ingredients_list"]}
 INGREDIENT TO SUBSTITUTE: {substitute}
 Key roles: gelling, binding, texturizing, stabilizing.
+
+Use the full ingredients list to understand the food matrix, but ONLY recommend substitutes for the exact INGREDIENT TO SUBSTITUTE.
 
 Candidates (ONLY pick from this list):
 {candidates_block}
